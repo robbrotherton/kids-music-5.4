@@ -2,7 +2,8 @@ import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { AudioEngine } from "./audio/AudioEngine";
 import { DrumMachine, type TrackDefinition } from "./audio/DrumMachine";
-import { SynthMachine, type SynthWaveform } from "./audio/SynthMachine";
+import { MasterTransport } from "./audio/MasterTransport";
+import { SynthMachine, type SynthRate, type SynthWaveform } from "./audio/SynthMachine";
 import { Knob } from "./components/Knob";
 
 const DRUM_STEP_COUNT = 16;
@@ -11,6 +12,19 @@ const SYNTH_SCALE_LENGTH = 10;
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 const MINOR_PENTATONIC = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 const SYNTH_WAVEFORMS: SynthWaveform[] = ["sine", "triangle", "sawtooth", "square"];
+const SYNTH_RATES: SynthRate[] = ["half", "normal", "double", "quad"];
+const SYNTH_NOTE_COLORS = [
+  { color: "#ff8d7a", accent: "#ffd8cf" },
+  { color: "#ffb347", accent: "#ffe8bd" },
+  { color: "#ffd84d", accent: "#fff4be" },
+  { color: "#9ad95f", accent: "#e0f5c6" },
+  { color: "#56c9a2", accent: "#d1f4e8" },
+  { color: "#59b8ff", accent: "#d8efff" },
+  { color: "#6f9cff", accent: "#dfe8ff" },
+  { color: "#9a7cff", accent: "#ece2ff" },
+  { color: "#d97cff", accent: "#f5ddff" },
+  { color: "#ff88bc", accent: "#ffddec" },
+] as const;
 
 const TRACKS: TrackDefinition[] = [
   {
@@ -48,6 +62,11 @@ type Panel = "drums" | "synth";
 type StepButtonStyle = JSX.CSSProperties & {
   "--step-color": string;
   "--step-accent": string;
+};
+
+type NoteToneStyle = JSX.CSSProperties & {
+  "--note-color": string;
+  "--note-accent": string;
 };
 
 function createInitialDrumPattern() {
@@ -108,6 +127,43 @@ function getScaleNoteLabel(noteIndex: number, transpose: number) {
   return noteIndex >= 5 ? `${noteName}↑` : noteName;
 }
 
+function getNoteTone(noteIndex: number) {
+  if (noteIndex < 0) {
+    return { color: "#f0e7dc", accent: "#faf4ec" };
+  }
+
+  return SYNTH_NOTE_COLORS[noteIndex % SYNTH_NOTE_COLORS.length];
+}
+
+interface ActionOrbProps {
+  label: string;
+  kind: "spark" | "clear";
+  onClick: () => void;
+}
+
+function ActionOrb({ label, kind, onClick }: ActionOrbProps) {
+  return (
+    <button
+      type="button"
+      class={`action-orb action-orb--${kind}`}
+      onClick={onClick}
+      aria-label={label}
+    >
+      <span class="action-orb__icon" aria-hidden="true">
+        {kind === "spark" ? (
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M7.5.5a.5.5 0 0 1 .46.696L6.674 4.5h2.576a.5.5 0 0 1 .39.813L5.71 10.16l1.18-3.66H4.5a.5.5 0 0 1-.457-.703l2.99-4.99A.5.5 0 0 1 7.5.5Z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8.086 1.207a1.5 1.5 0 0 1 2.121 0l4.586 4.586a1.5 1.5 0 0 1 0 2.121L9.914 12.793A1.5 1.5 0 0 1 8.854 13H3.5a.5.5 0 0 1-.354-.146l-2-2a.5.5 0 0 1 0-.708l6.94-6.939Zm1.414.707a.5.5 0 0 0-.707 0L2.207 8.5 3.707 10h4.94a.5.5 0 0 0 .353-.146l4.793-4.793a.5.5 0 0 0 0-.707L9.5 1.914ZM11.646 14.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L12 13.793l-1.646-1.647a.5.5 0 0 0-.708.708l2 2Z" />
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
 export function App() {
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumMachineRef = useRef<DrumMachine | null>(null);
@@ -120,6 +176,7 @@ export function App() {
   const [drumPattern, setDrumPattern] = useState<boolean[][]>(() => createInitialDrumPattern());
   const [currentDrumStep, setCurrentDrumStep] = useState(0);
   const [isDrumPlaying, setIsDrumPlaying] = useState(false);
+  const [drumVolumeAmount, setDrumVolumeAmount] = useState(0.6);
   const [drumFilterAmount, setDrumFilterAmount] = useState(0.78);
   const [drumHoldAmount, setDrumHoldAmount] = useState(0.35);
   const [drumCrushAmount, setDrumCrushAmount] = useState(0.12);
@@ -130,6 +187,7 @@ export function App() {
   const [isSynthPlaying, setIsSynthPlaying] = useState(false);
   const [synthTranspose, setSynthTranspose] = useState(0);
   const [synthWaveform, setSynthWaveform] = useState<SynthWaveform>("triangle");
+  const [synthRate, setSynthRate] = useState<SynthRate>("normal");
   const [synthFilter, setSynthFilter] = useState(0.58);
   const [synthRelease, setSynthRelease] = useState(0.26);
   const [synthGlide, setSynthGlide] = useState(0.08);
@@ -140,15 +198,18 @@ export function App() {
 
   useEffect(() => {
     const audioEngine = new AudioEngine();
+    const masterTransport = new MasterTransport(audioEngine);
     const drumMachine = new DrumMachine({
       stepCount: DRUM_STEP_COUNT,
       tracks: TRACKS,
       engine: audioEngine,
+      transport: masterTransport,
       onStepChange: setCurrentDrumStep,
     });
     const synthMachine = new SynthMachine({
       stepCount: SYNTH_STEP_COUNT,
       engine: audioEngine,
+      transport: masterTransport,
       onStepChange: setCurrentSynthStep,
     });
 
@@ -158,6 +219,7 @@ export function App() {
 
     drumMachine.setPattern(drumPattern);
     drumMachine.setTempo(tempo);
+    drumMachine.setVolume(drumVolumeAmount);
     drumMachine.setFilter(drumFilterAmount);
     drumMachine.setHold(drumHoldAmount);
     drumMachine.setCrush(drumCrushAmount);
@@ -166,6 +228,7 @@ export function App() {
     synthMachine.setTempo(tempo);
     synthMachine.setTranspose(synthTranspose);
     synthMachine.setWaveform(synthWaveform);
+    synthMachine.setRate(synthRate);
     synthMachine.setFilter(synthFilter);
     synthMachine.setRelease(synthRelease);
     synthMachine.setGlide(synthGlide);
@@ -198,6 +261,10 @@ export function App() {
   }, [tempo]);
 
   useEffect(() => {
+    drumMachineRef.current?.setVolume(drumVolumeAmount);
+  }, [drumVolumeAmount]);
+
+  useEffect(() => {
     drumMachineRef.current?.setFilter(drumFilterAmount);
   }, [drumFilterAmount]);
 
@@ -216,6 +283,10 @@ export function App() {
   useEffect(() => {
     synthMachineRef.current?.setWaveform(synthWaveform);
   }, [synthWaveform]);
+
+  useEffect(() => {
+    synthMachineRef.current?.setRate(synthRate);
+  }, [synthRate]);
 
   useEffect(() => {
     synthMachineRef.current?.setFilter(synthFilter);
@@ -290,6 +361,7 @@ export function App() {
       const isCurrent = stepIndex === currentSynthStep && isSynthPlaying;
       const isSelected = stepIndex === selectedSynthStep;
       const label = getScaleNoteLabel(noteIndex, synthTranspose);
+      const tone = getNoteTone(noteIndex);
 
       return (
         <button
@@ -301,12 +373,13 @@ export function App() {
           style={{
             left: `calc(50% + ${x}px)`,
             top: `calc(50% + ${y}px)`,
-          }}
+            "--note-color": tone.color,
+            "--note-accent": tone.accent,
+          } as NoteToneStyle}
           onClick={() => setSelectedSynthStep(stepIndex)}
           aria-label={`Synth step ${stepIndex + 1} ${label}`}
         >
-          <small>{stepIndex + 1}</small>
-          <strong>{noteIndex >= 0 ? label : "Rest"}</strong>
+          <span class="note-step__label">{noteIndex >= 0 ? label : "•"}</span>
         </button>
       );
     });
@@ -316,12 +389,14 @@ export function App() {
     return Array.from({ length: SYNTH_SCALE_LENGTH }, (_, noteIndex) => {
       const label = getScaleNoteLabel(noteIndex, synthTranspose);
       const isActive = synthSequence[selectedSynthStep] === noteIndex;
+      const tone = getNoteTone(noteIndex);
 
       return (
         <button
           key={`key-${noteIndex}`}
           type="button"
           class={`key-button ${isActive ? "is-active" : ""}`}
+          style={{ "--note-color": tone.color, "--note-accent": tone.accent } as NoteToneStyle}
           onClick={() => {
             setSynthSequence((previous) =>
               previous.map((value, stepIndex) => (stepIndex === selectedSynthStep ? noteIndex : value)),
@@ -509,17 +584,13 @@ export function App() {
                     <p>Start with a groove, clear it, then tap your own pattern into the rings.</p>
                   </div>
 
-                  <div class="action-row">
-                    <button class="soft-button" type="button" onClick={() => setDrumPattern(randomizeDrumPattern())}>
-                      Spark
-                    </button>
-                    <button
-                      class="soft-button soft-button--ghost"
-                      type="button"
+                  <div class="action-orb-row">
+                    <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
+                    <ActionOrb
+                      label="Clear"
+                      kind="clear"
                       onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
-                    >
-                      Clear
-                    </button>
+                    />
                   </div>
                 </div>
 
@@ -527,10 +598,11 @@ export function App() {
                   <div class="control-cluster__header">
                     <p class="eyebrow">Shape</p>
                     <h3>Drum sound</h3>
-                    <p>Drag the dials up and down. Double-tap a dial to snap it back to the middle.</p>
+                    <p>Drag the dials up and down. Use volume to tuck drums under the synth when needed.</p>
                   </div>
 
                   <div class="knob-grid">
+                    <Knob id="drum-volume" label="Volume" value={drumVolumeAmount} onChange={setDrumVolumeAmount} hue={14} />
                     <Knob id="filter" label="Filter" value={drumFilterAmount} onChange={setDrumFilterAmount} hue={35} />
                     <Knob id="hold" label="Hold" value={drumHoldAmount} onChange={setDrumHoldAmount} hue={155} />
                     <Knob id="crusher" label="Crusher" value={drumCrushAmount} onChange={setDrumCrushAmount} hue={208} />
@@ -615,10 +687,16 @@ export function App() {
                     <p>Select a step on the ring, then tap a key below to assign or preview that note.</p>
                   </div>
 
-                  <div class="action-row action-row--triple">
-                    <button class="soft-button" type="button" onClick={() => setSynthSequence(randomizeSynthSequence())}>
-                      Spark
-                    </button>
+                  <div class="action-orb-row">
+                    <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
+                    <ActionOrb
+                      label="Clear"
+                      kind="clear"
+                      onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
+                    />
+                  </div>
+
+                  <div class="action-row action-row--single">
                     <button
                       class="soft-button soft-button--ghost"
                       type="button"
@@ -630,13 +708,21 @@ export function App() {
                     >
                       Rest Step
                     </button>
-                    <button
-                      class="soft-button soft-button--ghost"
-                      type="button"
-                      onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
-                    >
-                      Clear
-                    </button>
+                  </div>
+
+                  <div class="rate-selector" role="radiogroup" aria-label="Synth rate">
+                    {SYNTH_RATES.map((rate) => (
+                      <button
+                        key={rate}
+                        type="button"
+                        class={`rate-button ${synthRate === rate ? "is-active" : ""}`}
+                        onClick={() => setSynthRate(rate)}
+                        role="radio"
+                        aria-checked={synthRate === rate}
+                      >
+                        {rate === "half" ? "1/2x" : rate === "double" ? "2x" : rate === "quad" ? "4x" : "1x"}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

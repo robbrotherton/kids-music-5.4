@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/audio/audioengine.ts","./src/audio/drummachine.ts","./src/audio/synthmachine.ts","./src/components/knob.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/audio/audioengine.ts","./src/audio/drummachine.ts","./src/audio/mastertransport.ts","./src/audio/synthmachine.ts","./src/components/knob.tsx"],"version":"5.9.3"}

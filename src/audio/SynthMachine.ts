@@ -1,12 +1,15 @@
 import { AudioEngine } from "./AudioEngine";
+import { MasterTransport } from "./MasterTransport";
 
 interface SynthMachineOptions {
   stepCount: number;
   engine: AudioEngine;
+  transport: MasterTransport;
   onStepChange?: (step: number) => void;
 }
 
 export type SynthWaveform = OscillatorType;
+export type SynthRate = "half" | "normal" | "double" | "quad";
 
 interface ActiveVoice {
   ampGain: GainNode;
@@ -15,17 +18,15 @@ interface ActiveVoice {
   oscB: OscillatorNode;
 }
 
-const LOOK_AHEAD_MS = 25;
-const SCHEDULE_AHEAD_TIME = 0.12;
 const SCALE_OFFSETS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
 const midiToFrequency = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
 export class SynthMachine {
   private readonly stepCount: number;
   private readonly engine: AudioEngine;
+  private readonly transport: MasterTransport;
   private readonly onStepChange?: (step: number) => void;
 
   private audioContext: AudioContext | null = null;
@@ -37,17 +38,22 @@ export class SynthMachine {
   private masterGainNode: GainNode | null = null;
   private compressorNode: DynamicsCompressorNode | null = null;
 
-  private timerId: number | null = null;
-  private nextNoteTime = 0;
   private currentStep = 0;
+  private engaged = false;
+  private pendingStart = false;
+  private running = false;
+  private startTransportStep = 0;
   private lastFrequency = midiToFrequency(60);
-  private lastScheduledTime: number | null = null;
+  private synthStepSerial = 0;
+  private lastScheduledStepSerial: number | null = null;
+  private unsubscribe: (() => void) | null = null;
   private sequence: number[];
   private activeVoices = new Set<ActiveVoice>();
 
   private tempo = 108;
   private transpose = 0;
   private waveform: SynthWaveform = "triangle";
+  private rate: SynthRate = "normal";
   private filterAmount = 0.58;
   private release = 0.26;
   private glide = 0.08;
@@ -59,8 +65,12 @@ export class SynthMachine {
   constructor(options: SynthMachineOptions) {
     this.stepCount = options.stepCount;
     this.engine = options.engine;
+    this.transport = options.transport;
     this.onStepChange = options.onStepChange;
     this.sequence = Array.from({ length: options.stepCount }, () => -1);
+    this.unsubscribe = this.transport.subscribe((event) =>
+      this.handleTransportTick(event.transportStep, event.barStart, event.time),
+    );
   }
 
   setSequence(sequence: number[]) {
@@ -69,6 +79,7 @@ export class SynthMachine {
 
   setTempo(tempo: number) {
     this.tempo = tempo;
+    this.transport.setTempo(tempo);
 
     if (this.delayNode) {
       this.delayNode.delayTime.setTargetAtTime(this.getDelayTime(), this.audioContext?.currentTime ?? 0, 0.02);
@@ -81,6 +92,10 @@ export class SynthMachine {
 
   setWaveform(waveform: SynthWaveform) {
     this.waveform = waveform;
+  }
+
+  setRate(rate: SynthRate) {
+    this.rate = rate;
   }
 
   setFilter(amount: number) {
@@ -129,33 +144,33 @@ export class SynthMachine {
   }
 
   isRunning() {
-    return this.timerId !== null;
+    return this.engaged;
   }
 
   async start() {
     await this.ensureAudio();
 
-    if (!this.audioContext || this.timerId !== null) {
+    if (this.engaged) {
       return;
     }
 
-    await this.engine.resume();
-    this.nextNoteTime = this.audioContext.currentTime;
-    this.currentStep = 0;
-    this.lastScheduledTime = null;
-    this.onStepChange?.(this.currentStep);
-    this.timerId = window.setInterval(() => this.scheduler(), LOOK_AHEAD_MS);
+    await this.transport.acquire();
+    this.engaged = true;
+    this.pendingStart = true;
   }
 
   stop() {
-    if (this.timerId !== null) {
-      window.clearInterval(this.timerId);
-      this.timerId = null;
+    if (this.engaged) {
+      this.transport.release();
     }
 
     this.stopActiveVoices();
-    this.lastScheduledTime = null;
+    this.engaged = false;
+    this.pendingStart = false;
+    this.running = false;
     this.currentStep = 0;
+    this.synthStepSerial = 0;
+    this.lastScheduledStepSerial = null;
     this.onStepChange?.(this.currentStep);
   }
 
@@ -172,6 +187,8 @@ export class SynthMachine {
 
   async dispose() {
     this.stop();
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 
   private async ensureAudio() {
@@ -209,29 +226,54 @@ export class SynthMachine {
     this.setCrush(this.crush);
   }
 
-  private scheduler() {
-    if (!this.audioContext) {
+  private handleTransportTick(transportStep: number, barStart: boolean, time: number) {
+    if (!this.engaged) {
       return;
     }
 
-    while (this.nextNoteTime < this.audioContext.currentTime + SCHEDULE_AHEAD_TIME) {
-      this.scheduleStep(this.currentStep, this.nextNoteTime);
-      this.advanceStep();
+    if (this.pendingStart && barStart) {
+      this.pendingStart = false;
+      this.running = true;
+      this.currentStep = 0;
+      this.startTransportStep = transportStep;
+      this.synthStepSerial = 0;
+      this.lastScheduledStepSerial = null;
     }
+
+    if (!this.running) {
+      return;
+    }
+
+    if (this.rate === "quad") {
+      this.advanceSynthStep(time, transportStep);
+      this.advanceSynthStep(time + this.getThirtySecondDuration(), transportStep);
+      return;
+    }
+
+    const interval = this.getStepInterval();
+    if ((transportStep - this.startTransportStep) % interval !== 0) {
+      return;
+    }
+
+    this.advanceSynthStep(time, transportStep);
   }
 
-  private scheduleStep(step: number, time: number) {
+  private advanceSynthStep(time: number, transportStep: number) {
+    const step = this.currentStep;
     const noteIndex = this.sequence[step];
+    const canGlide = this.lastScheduledStepSerial === this.synthStepSerial - 1;
 
     if (noteIndex >= 0) {
-      this.scheduleNote(noteIndex, time, false, this.lastScheduledTime !== null);
-      this.lastScheduledTime = time;
+      this.scheduleNote(noteIndex, time, false, canGlide);
+      this.lastScheduledStepSerial = this.synthStepSerial;
     } else {
-      this.lastScheduledTime = null;
+      this.lastScheduledStepSerial = null;
     }
 
     const uiDelay = Math.max(0, time - (this.audioContext?.currentTime ?? 0)) * 1000;
     window.setTimeout(() => this.onStepChange?.(step), uiDelay);
+    this.currentStep = (this.currentStep + 1) % this.stepCount;
+    this.synthStepSerial += 1;
   }
 
   private scheduleNote(noteIndex: number, time: number, isPreview: boolean, canGlide: boolean) {
@@ -300,10 +342,16 @@ export class SynthMachine {
     const stopTime = time + releaseTime + 0.04;
     oscA.stop(stopTime);
     oscB.stop(stopTime);
-
     this.lastFrequency = frequency;
 
-    const cleanupTimerId = window.setTimeout(() => {
+    const activeVoice: ActiveVoice = {
+      ampGain,
+      cleanupTimerId: 0,
+      oscA,
+      oscB,
+    };
+
+    activeVoice.cleanupTimerId = window.setTimeout(() => {
       oscA.disconnect();
       oscB.disconnect();
       mixA.disconnect();
@@ -313,20 +361,7 @@ export class SynthMachine {
       this.activeVoices.delete(activeVoice);
     }, Math.max(0, stopTime - this.audioContext.currentTime) * 1000 + 60);
 
-    const activeVoice: ActiveVoice = {
-      ampGain,
-      cleanupTimerId,
-      oscA,
-      oscB,
-    };
-
     this.activeVoices.add(activeVoice);
-  }
-
-  private advanceStep() {
-    const secondsPerBeat = 60 / this.tempo;
-    this.nextNoteTime += 0.5 * secondsPerBeat;
-    this.currentStep = (this.currentStep + 1) % this.stepCount;
   }
 
   private stopActiveVoices() {
@@ -340,8 +375,12 @@ export class SynthMachine {
       window.clearTimeout(voice.cleanupTimerId);
       voice.ampGain.gain.cancelScheduledValues(now);
       voice.ampGain.gain.setTargetAtTime(0.0001, now, 0.015);
-      voice.oscA.stop(now + 0.05);
-      voice.oscB.stop(now + 0.05);
+      try {
+        voice.oscA.stop(now + 0.05);
+      } catch {}
+      try {
+        voice.oscB.stop(now + 0.05);
+      } catch {}
       window.setTimeout(() => {
         voice.oscA.disconnect();
         voice.oscB.disconnect();
@@ -359,5 +398,22 @@ export class SynthMachine {
   private getDelayTime() {
     const beat = 60 / this.tempo;
     return beat * (0.18 + this.delay * 0.42);
+  }
+
+  private getStepInterval() {
+    if (this.rate === "half") {
+      return 4;
+    }
+
+    if (this.rate === "double") {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  private getThirtySecondDuration() {
+    const secondsPerBeat = 60 / this.tempo;
+    return secondsPerBeat * 0.125;
   }
 }

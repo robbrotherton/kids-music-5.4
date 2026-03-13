@@ -344,48 +344,43 @@ button {
 
 .note-step {
   display: grid;
-  justify-items: center;
-  gap: 4px;
-  width: 84px;
-  min-height: 62px;
-  padding: 10px 8px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #4e5f6d;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--note-color) 70%, white 30%) 0%, var(--note-color) 100%);
+  color: #243543;
   box-shadow:
-    inset 0 0 0 2px rgba(208, 220, 238, 0.9),
-    0 10px 18px rgba(113, 146, 189, 0.12);
-}
-
-.note-step small {
-  color: #7a8b9a;
-  font-size: 0.72rem;
-}
-
-.note-step strong {
-  font-size: 0.95rem;
-}
-
-.note-step.has-note {
-  background: linear-gradient(180deg, #f0f7ff 0%, #dceeff 100%);
+    inset 0 0 0 2px rgba(255, 255, 255, 0.88),
+    0 10px 18px color-mix(in srgb, var(--note-color) 24%, transparent);
 }
 
 .note-step.is-rest {
-  background: linear-gradient(180deg, #fffaf4 0%, #f4ede5 100%);
+  color: #7c8a96;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.88),
+    0 10px 18px rgba(170, 145, 115, 0.08);
+}
+
+.note-step__label {
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
 }
 
 .note-step.is-selected {
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 6px rgba(132, 187, 255, 0.18),
-    0 12px 20px rgba(113, 146, 189, 0.15);
+    0 0 0 6px color-mix(in srgb, var(--note-accent) 80%, transparent),
+    0 12px 20px color-mix(in srgb, var(--note-color) 20%, transparent);
 }
 
 .note-step.is-current {
-  transform: translate(-50%, -50%) scale(1.08);
+  transform: translate(-50%, -50%) scale(1.18);
   box-shadow:
-    0 0 0 7px rgba(186, 226, 255, 0.4),
-    0 12px 20px rgba(113, 146, 189, 0.16);
+    0 0 0 7px color-mix(in srgb, var(--note-accent) 86%, transparent),
+    0 12px 20px color-mix(in srgb, var(--note-color) 24%, transparent);
 }
 
 .dial-center-button {
@@ -490,20 +485,20 @@ button {
   min-height: 66px;
   border: 0;
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
-  color: #466173;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--note-accent) 78%, white 22%) 0%, color-mix(in srgb, var(--note-color) 38%, white 62%) 100%);
+  color: #334756;
   font-weight: 800;
   box-shadow:
-    inset 0 0 0 1px rgba(203, 219, 238, 0.9),
-    0 8px 16px rgba(109, 141, 194, 0.08);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.88),
+    0 8px 16px color-mix(in srgb, var(--note-color) 12%, transparent);
 }
 
 .key-button.is-active {
-  background: linear-gradient(180deg, #ddecff 0%, #b3d7ff 100%);
-  color: #204567;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--note-accent) 72%, white 28%) 0%, var(--note-color) 100%);
+  color: #173345;
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.82),
-    0 10px 18px rgba(109, 141, 194, 0.14);
+    0 10px 18px color-mix(in srgb, var(--note-color) 24%, transparent);
 }
 
 .control-bank {
@@ -537,6 +532,17 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.action-row--single {
+  grid-template-columns: 1fr;
+}
+
+.action-orb-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
 .soft-button {
   min-height: 52px;
   padding: 14px 18px;
@@ -555,12 +561,56 @@ button {
     0 8px 16px rgba(170, 145, 115, 0.08);
 }
 
+.action-orb {
+  display: grid;
+  place-items: center;
+  width: 78px;
+  min-width: 78px;
+  height: 78px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #4d3320;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -10px 18px rgba(161, 124, 81, 0.16),
+    0 14px 24px rgba(170, 145, 115, 0.14);
+}
+
+.action-orb--spark {
+  background: linear-gradient(180deg, #fff0b9 0%, #ffc95c 100%);
+}
+
+.action-orb--clear {
+  background: linear-gradient(180deg, #fffdf8 0%, #ebe3d9 100%);
+  color: #576573;
+}
+
+.action-orb__icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.action-orb__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
 .wave-selector {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
   margin-bottom: 14px;
+}
+
+.rate-selector {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .wave-button {
@@ -581,6 +631,26 @@ button {
   box-shadow:
     inset 0 2px 0 rgba(255, 255, 255, 0.78),
     0 10px 18px rgba(247, 193, 88, 0.18);
+}
+
+.rate-button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5a6a78;
+  font-weight: 800;
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 203, 191, 0.92),
+    0 8px 16px rgba(170, 145, 115, 0.08);
+}
+
+.rate-button.is-active {
+  background: linear-gradient(180deg, #ddecff 0%, #b3d7ff 100%);
+  color: #204567;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.82),
+    0 10px 18px rgba(109, 141, 194, 0.14);
 }
 
 .knob-grid {
@@ -725,13 +795,13 @@ button {
   }
 
   .note-step {
-    width: 72px;
-    min-height: 56px;
-    padding: 8px 6px;
+    width: 50px;
+    height: 50px;
   }
 
   .track-legend,
   .keyboard-strip,
+  .rate-selector,
   .wave-selector,
   .knob-grid,
   .knob-grid--wide,
@@ -745,6 +815,7 @@ button {
   .workspace-bar,
   .track-legend,
   .keyboard-strip,
+  .rate-selector,
   .wave-selector,
   .knob-grid,
   .knob-grid--wide,
@@ -759,6 +830,12 @@ button {
     height: min(106vw, 520px);
   }
 
+  .action-orb {
+    width: 68px;
+    min-width: 68px;
+    height: 68px;
+  }
+
   .synth-dial__ring {
     width: 300px;
     height: 300px;
@@ -770,7 +847,12 @@ button {
   }
 
   .note-step {
-    width: 66px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .note-step__label {
+    font-size: 0.76rem;
   }
 
   .dial-center-button {

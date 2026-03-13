@@ -1,4 +1,5 @@
 import { AudioEngine } from "./AudioEngine";
+import { MasterTransport } from "./MasterTransport";
 
 export interface TrackDefinition {
   id: string;
@@ -12,16 +13,15 @@ interface DrumMachineOptions {
   stepCount: number;
   tracks: TrackDefinition[];
   engine: AudioEngine;
+  transport: MasterTransport;
   onStepChange?: (step: number) => void;
 }
-
-const LOOK_AHEAD_MS = 25;
-const SCHEDULE_AHEAD_TIME = 0.12;
 
 export class DrumMachine {
   private readonly stepCount: number;
   private readonly tracks: TrackDefinition[];
   private readonly engine: AudioEngine;
+  private readonly transport: MasterTransport;
   private readonly onStepChange?: (step: number) => void;
 
   private audioContext: AudioContext | null = null;
@@ -30,10 +30,13 @@ export class DrumMachine {
   private crusherNode: AudioWorkletNode | null = null;
   private compressorNode: DynamicsCompressorNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
-  private timerId: number | null = null;
-  private nextNoteTime = 0;
   private currentStep = 0;
+  private engaged = false;
+  private pendingStart = false;
+  private running = false;
+  private unsubscribe: (() => void) | null = null;
   private tempo = 108;
+  private volume = 0.68;
   private hold = 0.35;
   private filterAmount = 0.78;
   private crushAmount = 0.12;
@@ -43,8 +46,10 @@ export class DrumMachine {
     this.stepCount = options.stepCount;
     this.tracks = options.tracks;
     this.engine = options.engine;
+    this.transport = options.transport;
     this.onStepChange = options.onStepChange;
     this.pattern = options.tracks.map(() => Array.from({ length: options.stepCount }, () => false));
+    this.unsubscribe = this.transport.subscribe((event) => this.handleTransportTick(event.barStep, event.barStart, event.time));
   }
 
   setPattern(pattern: boolean[][]) {
@@ -53,10 +58,22 @@ export class DrumMachine {
 
   setTempo(tempo: number) {
     this.tempo = tempo;
+    this.transport.setTempo(tempo);
   }
 
   setHold(amount: number) {
     this.hold = amount;
+  }
+
+  setVolume(amount: number) {
+    this.volume = amount;
+
+    if (!this.masterGain) {
+      return;
+    }
+
+    const gain = amount;
+    this.masterGain.gain.setTargetAtTime(gain, this.audioContext?.currentTime ?? 0, 0.02);
   }
 
   setFilter(amount: number) {
@@ -96,35 +113,37 @@ export class DrumMachine {
   }
 
   isRunning() {
-    return this.timerId !== null;
+    return this.engaged;
   }
 
   async start() {
     await this.ensureAudio();
 
-    if (!this.audioContext || this.timerId !== null) {
+    if (this.engaged) {
       return;
     }
 
-    await this.audioContext.resume();
-    this.nextNoteTime = this.audioContext.currentTime;
-    this.currentStep = 0;
-    this.onStepChange?.(this.currentStep);
-    this.timerId = window.setInterval(() => this.scheduler(), LOOK_AHEAD_MS);
+    await this.transport.acquire();
+    this.engaged = true;
+    this.pendingStart = true;
   }
 
   stop() {
-    if (this.timerId !== null) {
-      window.clearInterval(this.timerId);
-      this.timerId = null;
+    if (this.engaged) {
+      this.transport.release();
     }
 
+    this.engaged = false;
+    this.pendingStart = false;
+    this.running = false;
     this.currentStep = 0;
     this.onStepChange?.(this.currentStep);
   }
 
   async dispose() {
     this.stop();
+    this.unsubscribe?.();
+    this.unsubscribe = null;
   }
 
   private async ensureAudio() {
@@ -134,7 +153,7 @@ export class DrumMachine {
 
     this.audioContext = await this.engine.getContext();
     this.masterGain = this.audioContext.createGain();
-    this.masterGain.gain.value = 0.78;
+    this.masterGain.gain.value = this.volume;
 
     this.filterNode = this.audioContext.createBiquadFilter();
     this.filterNode.type = "lowpass";
@@ -154,22 +173,26 @@ export class DrumMachine {
     this.compressorNode.connect(this.audioContext.destination);
 
     this.noiseBuffer = this.createNoiseBuffer(this.audioContext);
+    this.setVolume(this.volume);
     this.setFilter(this.filterAmount);
     this.setCrush(this.crushAmount);
   }
 
-  private scheduler() {
-    if (!this.audioContext) {
+  private handleTransportTick(step: number, barStart: boolean, time: number) {
+    if (!this.engaged) {
       return;
     }
 
-    while (this.nextNoteTime < this.audioContext.currentTime + SCHEDULE_AHEAD_TIME) {
-      this.scheduleStep(this.currentStep, this.nextNoteTime);
-      this.advanceStep();
+    if (this.pendingStart && barStart) {
+      this.pendingStart = false;
+      this.running = true;
+      this.currentStep = 0;
     }
-  }
 
-  private scheduleStep(step: number, time: number) {
+    if (!this.running) {
+      return;
+    }
+
     for (let trackIndex = 0; trackIndex < this.tracks.length; trackIndex += 1) {
       if (!this.pattern[trackIndex]?.[step]) {
         continue;
@@ -190,12 +213,6 @@ export class DrumMachine {
 
     const uiDelay = Math.max(0, time - (this.audioContext?.currentTime ?? 0)) * 1000;
     window.setTimeout(() => this.onStepChange?.(step), uiDelay);
-  }
-
-  private advanceStep() {
-    const secondsPerBeat = 60 / this.tempo;
-    this.nextNoteTime += 0.25 * secondsPerBeat;
-    this.currentStep = (this.currentStep + 1) % this.stepCount;
   }
 
   private playKick(time: number) {
