@@ -57,8 +57,6 @@ const TRACKS: TrackDefinition[] = [
   },
 ];
 
-type Panel = "drums" | "synth";
-
 type StepButtonStyle = JSX.CSSProperties & {
   "--step-color": string;
   "--step-accent": string;
@@ -110,11 +108,6 @@ function randomizeSynthSequence() {
 
     return Math.random() > 0.25 ? Math.floor(Math.random() * SYNTH_SCALE_LENGTH) : -1;
   });
-}
-
-function getKeyName(transpose: number) {
-  const rootIndex = ((transpose % 12) + 12) % 12;
-  return NOTE_NAMES[rootIndex];
 }
 
 function getScaleNoteLabel(noteIndex: number, transpose: number) {
@@ -198,9 +191,7 @@ export function App() {
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumMachineRef = useRef<DrumMachine | null>(null);
   const synthMachineRef = useRef<SynthMachine | null>(null);
-  const swipeStartXRef = useRef<number | null>(null);
 
-  const [activePanel, setActivePanel] = useState<Panel>("drums");
   const [tempo, setTempo] = useState(108);
 
   const [drumPattern, setDrumPattern] = useState<boolean[][]>(() => createInitialDrumPattern());
@@ -416,7 +407,9 @@ export function App() {
   }, [currentSynthStep, isSynthPlaying, selectedSynthStep, synthSequence, synthTranspose]);
 
   const synthKeyboardButtons = useMemo(() => {
-    return Array.from({ length: SYNTH_SCALE_LENGTH }, (_, noteIndex) => {
+    const noteOptions = [-1, ...Array.from({ length: SYNTH_SCALE_LENGTH }, (_, noteIndex) => noteIndex)];
+
+    return noteOptions.map((noteIndex) => {
       const label = getScaleNoteLabel(noteIndex, synthTranspose);
       const isActive = synthSequence[selectedSynthStep] === noteIndex;
       const tone = getNoteTone(noteIndex);
@@ -425,16 +418,19 @@ export function App() {
         <button
           key={`key-${noteIndex}`}
           type="button"
-          class={`key-button ${isActive ? "is-active" : ""}`}
+          class={`key-button ${isActive ? "is-active" : ""} ${noteIndex < 0 ? "is-rest" : ""}`}
           style={{ "--note-color": tone.color, "--note-accent": tone.accent } as NoteToneStyle}
           onClick={() => {
             setSynthSequence((previous) =>
               previous.map((value, stepIndex) => (stepIndex === selectedSynthStep ? noteIndex : value)),
             );
-            void synthMachineRef.current?.previewStep(noteIndex);
+            if (noteIndex >= 0) {
+              void synthMachineRef.current?.previewStep(noteIndex);
+            }
           }}
+          aria-label={noteIndex < 0 ? "Rest" : label}
         >
-          <span>{label}</span>
+          <span>{noteIndex < 0 ? "•" : label}</span>
         </button>
       );
     });
@@ -474,45 +470,9 @@ export function App() {
     setIsSynthPlaying(true);
   };
 
-  const handleStagePointerDown = (event: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    swipeStartXRef.current = event.clientX;
-  };
-
-  const handleStagePointerUp = (event: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    if (swipeStartXRef.current === null) {
-      return;
-    }
-
-    const delta = event.clientX - swipeStartXRef.current;
-    swipeStartXRef.current = null;
-
-    if (Math.abs(delta) < 56) {
-      return;
-    }
-
-    setActivePanel(delta < 0 ? "synth" : "drums");
-  };
-
   return (
     <main class="app-shell">
       <section class="workspace-bar">
-        <div class="instrument-switcher" aria-label="Instrument panels">
-          <button
-            type="button"
-            class={`switch-pill ${activePanel === "drums" ? "is-active" : ""}`}
-            onClick={() => setActivePanel("drums")}
-          >
-            Drums
-          </button>
-          <button
-            type="button"
-            class={`switch-pill ${activePanel === "synth" ? "is-active" : ""}`}
-            onClick={() => setActivePanel("synth")}
-          >
-            Synth
-          </button>
-        </div>
-
         <div class="tempo-card tempo-card--global">
           <div class="tempo-card__label">
             <span>Shared tempo</span>
@@ -531,186 +491,161 @@ export function App() {
         </div>
       </section>
 
-      <section
-        class="instrument-stage"
-        onPointerDown={handleStagePointerDown}
-        onPointerUp={handleStagePointerUp}
-        onPointerCancel={() => {
-          swipeStartXRef.current = null;
-        }}
-      >
-        <div
-          class="instrument-stage__track"
-          style={{ transform: `translateX(${activePanel === "drums" ? "0%" : "-50%"})` }}
-        >
-          <section class="instrument-panel">
-            <div class="instrument-panel__body">
-              <div class="sequencer-area">
-                <div class="machine__dial" aria-label="Circular drum sequencer">
-                  <div class="dial-rings">
-                    {TRACKS.map((track) => (
-                      <div
-                        key={track.id}
-                        class="dial-ring"
-                        style={{
-                          width: `${track.radius * 2 + 40}px`,
-                          height: `${track.radius * 2 + 40}px`,
-                          borderColor: `${track.color}66`,
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  {drumStepButtons}
-
-                  <TransportIconButton
-                    isPlaying={isDrumPlaying}
-                    onClick={toggleDrumPlayback}
-                    playLabel="Play drums"
-                    pauseLabel="Pause drums"
-                  />
-                </div>
-              </div>
-
-              <aside class="control-bank">
-                <div class="control-cluster">
-                  <div class="action-orb-row">
-                    <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
-                    <ActionOrb
-                      label="Clear"
-                      kind="clear"
-                      onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
+      <section class="instrument-stage">
+        <section class="instrument-panel">
+          <div class="instrument-panel__body instrument-panel__body--stacked">
+            <div class="sequencer-area">
+              <div class="machine__dial" aria-label="Circular drum sequencer">
+                <div class="dial-rings">
+                  {TRACKS.map((track) => (
+                    <div
+                      key={track.id}
+                      class="dial-ring"
+                      style={{
+                        width: `${track.radius * 2 + 40}px`,
+                        height: `${track.radius * 2 + 40}px`,
+                        borderColor: `${track.color}66`,
+                      }}
                     />
-                  </div>
+                  ))}
                 </div>
 
-                <div class="control-cluster">
-                  <div class="knob-grid">
-                    <Knob id="drum-volume" label="Volume" value={drumVolumeAmount} onChange={setDrumVolumeAmount} hue={14} />
-                    <Knob id="filter" label="Filter" value={drumFilterAmount} onChange={setDrumFilterAmount} hue={35} />
-                    <Knob id="hold" label="Hold" value={drumHoldAmount} onChange={setDrumHoldAmount} hue={155} />
-                    <Knob id="crusher" label="Crusher" value={drumCrushAmount} onChange={setDrumCrushAmount} hue={208} />
-                  </div>
-                </div>
-              </aside>
-            </div>
-          </section>
+                {drumStepButtons}
 
-          <section class="instrument-panel instrument-panel--synth">
-            <div class="instrument-panel__header instrument-panel__header--minimal">
-              <div class="pitch-strip">
-                <button
-                  type="button"
-                  class="chip-button"
-                  onClick={() => setSynthTranspose((previous) => Math.max(-12, previous - 1))}
-                >
-                  Key -
-                </button>
-                <div class="pitch-readout">
-                  <span>Key</span>
-                  <strong>{getKeyName(synthTranspose)} minor pentatonic</strong>
-                </div>
-                <button
-                  type="button"
-                  class="chip-button"
-                  onClick={() => setSynthTranspose((previous) => Math.min(12, previous + 1))}
-                >
-                  Key +
-                </button>
+                <TransportIconButton
+                  isPlaying={isDrumPlaying}
+                  onClick={toggleDrumPlayback}
+                  playLabel="Play drums"
+                  pauseLabel="Pause drums"
+                />
               </div>
             </div>
 
-            <div class="instrument-panel__body">
-              <div class="sequencer-area synth-sequencer-area">
-                <div class="synth-dial" aria-label="Circular synth sequencer">
-                  <div class="synth-dial__ring" />
-                  {synthStepButtons}
-
-                  <TransportIconButton
-                    isPlaying={isSynthPlaying}
-                    onClick={toggleSynthPlayback}
-                    playLabel="Play synth"
-                    pauseLabel="Pause synth"
+            <aside class="control-bank">
+              <div class="control-cluster">
+                <div class="action-orb-row">
+                  <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
+                  <ActionOrb
+                    label="Clear"
+                    kind="clear"
+                    onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
                   />
                 </div>
+              </div>
 
-                <div class="keyboard-panel">
+              <div class="control-cluster">
+                <div class="knob-grid knob-grid--drums">
+                  <Knob id="drum-volume" label="Volume" value={drumVolumeAmount} onChange={setDrumVolumeAmount} hue={14} />
+                  <Knob id="filter" label="Filter" value={drumFilterAmount} onChange={setDrumFilterAmount} hue={35} />
+                  <Knob id="hold" label="Hold" value={drumHoldAmount} onChange={setDrumHoldAmount} hue={155} />
+                  <Knob id="crusher" label="Crusher" value={drumCrushAmount} onChange={setDrumCrushAmount} hue={208} />
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="instrument-panel instrument-panel--synth">
+          <div class="instrument-panel__body instrument-panel__body--stacked">
+            <div class="sequencer-area synth-sequencer-area">
+              <div class="synth-dial" aria-label="Circular synth sequencer">
+                <div class="synth-dial__ring" />
+                {synthStepButtons}
+
+                <TransportIconButton
+                  isPlaying={isSynthPlaying}
+                  onClick={toggleSynthPlayback}
+                  playLabel="Play synth"
+                  pauseLabel="Pause synth"
+                />
+              </div>
+
+              <div class="keyboard-panel">
+                <div class="key-shift-row">
+                  <button
+                    type="button"
+                    class="transpose-arrow transpose-arrow--left"
+                    onClick={() => setSynthTranspose((previous) => Math.max(-12, previous - 1))}
+                    aria-label="Lower key"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                      <path d="M10.5 2.5 4.5 8l6 5.5v-11Z" />
+                    </svg>
+                  </button>
+
                   <div class="keyboard-strip">{synthKeyboardButtons}</div>
+
+                  <button
+                    type="button"
+                    class="transpose-arrow transpose-arrow--right"
+                    onClick={() => setSynthTranspose((previous) => Math.min(12, previous + 1))}
+                    aria-label="Raise key"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                      <path d="M5.5 2.5 11.5 8l-6 5.5v-11Z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <aside class="control-bank">
+              <div class="control-cluster">
+                <div class="action-orb-row">
+                  <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
+                  <ActionOrb
+                    label="Clear"
+                    kind="clear"
+                    onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
+                  />
+                </div>
+
+                <div class="rate-selector" role="radiogroup" aria-label="Synth rate">
+                  {SYNTH_RATES.map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      class={`rate-button ${synthRate === rate ? "is-active" : ""}`}
+                      onClick={() => setSynthRate(rate)}
+                      role="radio"
+                      aria-checked={synthRate === rate}
+                    >
+                      {rate === "half" ? "1/2x" : rate === "double" ? "2x" : rate === "quad" ? "4x" : "1x"}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <aside class="control-bank">
-                <div class="control-cluster">
-                  <div class="action-orb-row">
-                    <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
-                    <ActionOrb
-                      label="Clear"
-                      kind="clear"
-                      onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
-                    />
-                  </div>
-
-                  <div class="action-row action-row--single">
+              <div class="control-cluster">
+                <div class="wave-selector" role="radiogroup" aria-label="Wave shape">
+                  {SYNTH_WAVEFORMS.map((waveform) => (
                     <button
-                      class="soft-button soft-button--ghost"
+                      key={waveform}
                       type="button"
-                      onClick={() =>
-                        setSynthSequence((previous) =>
-                          previous.map((value, stepIndex) => (stepIndex === selectedSynthStep ? -1 : value)),
-                        )
-                      }
+                      class={`wave-button ${synthWaveform === waveform ? "is-active" : ""}`}
+                      onClick={() => setSynthWaveform(waveform)}
+                      role="radio"
+                      aria-checked={synthWaveform === waveform}
+                      aria-label={waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
                     >
-                      Rest Step
+                      {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
                     </button>
-                  </div>
-
-                  <div class="rate-selector" role="radiogroup" aria-label="Synth rate">
-                    {SYNTH_RATES.map((rate) => (
-                      <button
-                        key={rate}
-                        type="button"
-                        class={`rate-button ${synthRate === rate ? "is-active" : ""}`}
-                        onClick={() => setSynthRate(rate)}
-                        role="radio"
-                        aria-checked={synthRate === rate}
-                      >
-                        {rate === "half" ? "1/2x" : rate === "double" ? "2x" : rate === "quad" ? "4x" : "1x"}
-                      </button>
-                    ))}
-                  </div>
+                  ))}
                 </div>
 
-                <div class="control-cluster">
-                  <div class="wave-selector" role="radiogroup" aria-label="Wave shape">
-                    {SYNTH_WAVEFORMS.map((waveform) => (
-                      <button
-                        key={waveform}
-                        type="button"
-                        class={`wave-button ${synthWaveform === waveform ? "is-active" : ""}`}
-                        onClick={() => setSynthWaveform(waveform)}
-                        role="radio"
-                        aria-checked={synthWaveform === waveform}
-                        aria-label={waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
-                      >
-                        {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div class="knob-grid knob-grid--wide">
-                    <Knob id="freq" label="Freq" value={synthFilter} onChange={setSynthFilter} hue={185} />
-                    <Knob id="release" label="Release" value={synthRelease} onChange={setSynthRelease} hue={128} />
-                    <Knob id="glide" label="Glide" value={synthGlide} onChange={setSynthGlide} hue={265} />
-                    <Knob id="accent" label="Accent" value={synthAccent} onChange={setSynthAccent} hue={18} />
-                    <Knob id="delay" label="Delay" value={synthDelay} onChange={setSynthDelay} hue={210} />
-                    <Knob id="crush-2" label="Crush" value={synthCrush} onChange={setSynthCrush} hue={334} />
-                    <Knob id="detune" label="Detune" value={synthDetune} onChange={setSynthDetune} hue={78} />
-                  </div>
+                <div class="knob-grid knob-grid--wide">
+                  <Knob id="freq" label="Freq" value={synthFilter} onChange={setSynthFilter} hue={185} />
+                  <Knob id="release" label="Release" value={synthRelease} onChange={setSynthRelease} hue={128} />
+                  <Knob id="glide" label="Glide" value={synthGlide} onChange={setSynthGlide} hue={265} />
+                  <Knob id="accent" label="Accent" value={synthAccent} onChange={setSynthAccent} hue={18} />
+                  <Knob id="delay" label="Delay" value={synthDelay} onChange={setSynthDelay} hue={210} />
+                  <Knob id="crush-2" label="Crush" value={synthCrush} onChange={setSynthCrush} hue={334} />
+                  <Knob id="detune" label="Detune" value={synthDetune} onChange={setSynthDetune} hue={78} />
                 </div>
-              </aside>
-            </div>
-          </section>
-        </div>
+              </div>
+            </aside>
+          </div>
+        </section>
       </section>
     </main>
   );
