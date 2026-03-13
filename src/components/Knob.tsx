@@ -14,6 +14,7 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value));
 type KnobPointerEvent = JSX.TargetedPointerEvent<HTMLButtonElement>;
 type KnobStyle = JSX.CSSProperties & {
   "--knob-hue": string;
+  "--knob-progress": string;
 };
 
 export function Knob({ id, label, value, onChange, hue }: KnobProps) {
@@ -53,7 +54,8 @@ export function Knob({ id, label, value, onChange, hue }: KnobProps) {
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
-  const angle = -135 + value * 270;
+  const angle = 180 + value * 360;
+  const percentage = Math.round(value * 100);
 
   return (
     <div class="knob-block">
@@ -61,18 +63,20 @@ export function Knob({ id, label, value, onChange, hue }: KnobProps) {
         type="button"
         id={id}
         class="knob"
-        style={{ "--knob-hue": `${hue}` } as KnobStyle}
+        style={{ "--knob-hue": `${hue}`, "--knob-progress": `${percentage}%` } as KnobStyle}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDblClick={() => onChange(0.5)}
+        aria-label={`${label} ${percentage}%`}
       >
         <span class="knob__track" />
         <span class="knob__indicator" style={{ transform: `translateX(-50%) rotate(${angle}deg)` }} />
         <span class="knob__cap" />
       </button>
       <span class="knob-block__label">{label}</span>
+      <span class="knob-block__value">{percentage}%</span>
     </div>
   );
 }

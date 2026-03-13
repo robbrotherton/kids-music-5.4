@@ -6,6 +6,8 @@ interface SynthMachineOptions {
   onStepChange?: (step: number) => void;
 }
 
+export type SynthWaveform = OscillatorType;
+
 interface ActiveVoice {
   ampGain: GainNode;
   cleanupTimerId: number;
@@ -45,7 +47,7 @@ export class SynthMachine {
 
   private tempo = 108;
   private transpose = 0;
-  private wave = 0.4;
+  private waveform: SynthWaveform = "triangle";
   private filterAmount = 0.58;
   private release = 0.26;
   private glide = 0.08;
@@ -77,8 +79,8 @@ export class SynthMachine {
     this.transpose = semitones;
   }
 
-  setWave(amount: number) {
-    this.wave = amount;
+  setWaveform(waveform: SynthWaveform) {
+    this.waveform = waveform;
   }
 
   setFilter(amount: number) {
@@ -244,8 +246,8 @@ export class SynthMachine {
     const peak = 0.12 + this.accent * 0.16;
     const baseFilter = this.getBaseFilterFrequency();
     const accentLift = 1.12 + this.accent * 1.3;
-    const waveBlend = 0.2 + this.wave * 0.8;
-    const detuneAmount = this.detune * 28;
+    const detuneCurve = Math.pow(this.detune, 1.2);
+    const detuneAmount = detuneCurve * 46;
     const glideTime = canGlide ? 0.002 + this.glide * 0.06 : 0;
     const attackTime = time + 0.01;
 
@@ -256,12 +258,12 @@ export class SynthMachine {
     const filterNode = this.audioContext.createBiquadFilter();
     const ampGain = this.audioContext.createGain();
 
-    oscA.type = "sawtooth";
-    oscB.type = "square";
+    oscA.type = this.waveform;
+    oscB.type = this.waveform;
     filterNode.type = "lowpass";
 
-    mixA.gain.value = 1 - waveBlend * 0.35;
-    mixB.gain.value = 0.08 + waveBlend * (0.5 + this.detune * 0.3);
+    mixA.gain.value = 0.8;
+    mixB.gain.value = 0.2 + detuneCurve * 0.24;
     oscB.detune.value = detuneAmount;
 
     oscA.connect(mixA);

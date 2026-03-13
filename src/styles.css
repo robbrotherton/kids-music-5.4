@@ -555,6 +555,34 @@ button {
     0 8px 16px rgba(170, 145, 115, 0.08);
 }
 
+.wave-selector {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 14px;
+}
+
+.wave-button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5a6a78;
+  font-weight: 800;
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 203, 191, 0.92),
+    0 8px 16px rgba(170, 145, 115, 0.08);
+}
+
+.wave-button.is-active {
+  background: linear-gradient(180deg, #ffe8b7 0%, #ffc55c 100%);
+  color: #4b2d12;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.78),
+    0 10px 18px rgba(247, 193, 88, 0.18);
+}
+
 .knob-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -569,7 +597,7 @@ button {
 .knob-block {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .knob {
@@ -591,26 +619,46 @@ button {
 
 .knob__track {
   position: absolute;
-  inset: 12px;
+  inset: 8px;
   border-radius: 50%;
-  border: 2px solid hsl(var(--knob-hue) 76% 56% / 0.34);
+  background:
+    conic-gradient(
+      from 180deg,
+      hsl(var(--knob-hue) 85% 58%) 0 var(--knob-progress),
+      rgba(214, 203, 191, 0.82) var(--knob-progress) 100%
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.86),
+    0 0 0 1px rgba(214, 203, 191, 0.56);
+}
+
+.knob__track::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.18), transparent 55%),
+    rgba(245, 237, 229, 0.98);
 }
 
 .knob__indicator {
   position: absolute;
   left: 50%;
   bottom: 50%;
-  width: 6px;
-  height: 34px;
+  width: 8px;
+  height: 38px;
   transform-origin: 50% calc(100% - 6px);
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffffff 0%, hsl(var(--knob-hue) 90% 58%) 100%);
-  box-shadow: 0 0 10px hsl(var(--knob-hue) 85% 58% / 0.28);
+  background: linear-gradient(180deg, #ffffff 0%, hsl(var(--knob-hue) 92% 48%) 100%);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.78),
+    0 0 10px hsl(var(--knob-hue) 85% 58% / 0.28);
 }
 
 .knob__cap {
   position: absolute;
-  inset: 24px;
+  inset: 28px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.82), transparent 24%),
@@ -624,6 +672,19 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.8rem;
+}
+
+.knob-block__value {
+  min-width: 3.5rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(214, 203, 191, 0.82);
+  color: #32414e;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 
 @media (max-width: 1120px) {
@@ -671,6 +732,7 @@ button {
 
   .track-legend,
   .keyboard-strip,
+  .wave-selector,
   .knob-grid,
   .knob-grid--wide,
   .action-row,
@@ -683,6 +745,7 @@ button {
   .workspace-bar,
   .track-legend,
   .keyboard-strip,
+  .wave-selector,
   .knob-grid,
   .knob-grid--wide,
   .action-row,
@@ -718,5 +781,13 @@ button {
   .knob {
     width: 92px;
     height: 92px;
+  }
+
+  .knob__indicator {
+    height: 32px;
+  }
+
+  .knob__cap {
+    inset: 24px;
   }
 }

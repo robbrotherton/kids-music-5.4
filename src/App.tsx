@@ -2,7 +2,7 @@ import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { AudioEngine } from "./audio/AudioEngine";
 import { DrumMachine, type TrackDefinition } from "./audio/DrumMachine";
-import { SynthMachine } from "./audio/SynthMachine";
+import { SynthMachine, type SynthWaveform } from "./audio/SynthMachine";
 import { Knob } from "./components/Knob";
 
 const DRUM_STEP_COUNT = 16;
@@ -10,6 +10,7 @@ const SYNTH_STEP_COUNT = 8;
 const SYNTH_SCALE_LENGTH = 10;
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 const MINOR_PENTATONIC = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
+const SYNTH_WAVEFORMS: SynthWaveform[] = ["sine", "triangle", "sawtooth", "square"];
 
 const TRACKS: TrackDefinition[] = [
   {
@@ -128,7 +129,7 @@ export function App() {
   const [currentSynthStep, setCurrentSynthStep] = useState(0);
   const [isSynthPlaying, setIsSynthPlaying] = useState(false);
   const [synthTranspose, setSynthTranspose] = useState(0);
-  const [synthWave, setSynthWave] = useState(0.45);
+  const [synthWaveform, setSynthWaveform] = useState<SynthWaveform>("triangle");
   const [synthFilter, setSynthFilter] = useState(0.58);
   const [synthRelease, setSynthRelease] = useState(0.26);
   const [synthGlide, setSynthGlide] = useState(0.08);
@@ -164,7 +165,7 @@ export function App() {
     synthMachine.setSequence(synthSequence);
     synthMachine.setTempo(tempo);
     synthMachine.setTranspose(synthTranspose);
-    synthMachine.setWave(synthWave);
+    synthMachine.setWaveform(synthWaveform);
     synthMachine.setFilter(synthFilter);
     synthMachine.setRelease(synthRelease);
     synthMachine.setGlide(synthGlide);
@@ -213,8 +214,8 @@ export function App() {
   }, [synthTranspose]);
 
   useEffect(() => {
-    synthMachineRef.current?.setWave(synthWave);
-  }, [synthWave]);
+    synthMachineRef.current?.setWaveform(synthWaveform);
+  }, [synthWaveform]);
 
   useEffect(() => {
     synthMachineRef.current?.setFilter(synthFilter);
@@ -644,13 +645,27 @@ export function App() {
                     <p class="eyebrow">Performance</p>
                     <h3>Voice controls</h3>
                     <p>
-                      Wave and detune shape the oscillators. Filter, release, glide, delay, crush, and
+                      Pick a waveform first, then use detune to thicken it. Filter, release, glide, delay, crush, and
                       accent shape the movement around them.
                     </p>
                   </div>
 
+                  <div class="wave-selector" role="radiogroup" aria-label="Wave shape">
+                    {SYNTH_WAVEFORMS.map((waveform) => (
+                      <button
+                        key={waveform}
+                        type="button"
+                        class={`wave-button ${synthWaveform === waveform ? "is-active" : ""}`}
+                        onClick={() => setSynthWaveform(waveform)}
+                        role="radio"
+                        aria-checked={synthWaveform === waveform}
+                      >
+                        {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
                   <div class="knob-grid knob-grid--wide">
-                    <Knob id="wave" label="Wave" value={synthWave} onChange={setSynthWave} hue={42} />
                     <Knob id="freq" label="Freq" value={synthFilter} onChange={setSynthFilter} hue={185} />
                     <Knob id="release" label="Release" value={synthRelease} onChange={setSynthRelease} hue={128} />
                     <Knob id="glide" label="Glide" value={synthGlide} onChange={setSynthGlide} hue={265} />
