@@ -1,3 +1,5 @@
+import { AudioEngine } from "./AudioEngine";
+
 export interface TrackDefinition {
   id: string;
   label: string;
@@ -9,6 +11,7 @@ export interface TrackDefinition {
 interface DrumMachineOptions {
   stepCount: number;
   tracks: TrackDefinition[];
+  engine: AudioEngine;
   onStepChange?: (step: number) => void;
 }
 
@@ -18,6 +21,7 @@ const SCHEDULE_AHEAD_TIME = 0.12;
 export class DrumMachine {
   private readonly stepCount: number;
   private readonly tracks: TrackDefinition[];
+  private readonly engine: AudioEngine;
   private readonly onStepChange?: (step: number) => void;
 
   private audioContext: AudioContext | null = null;
@@ -29,8 +33,6 @@ export class DrumMachine {
   private timerId: number | null = null;
   private nextNoteTime = 0;
   private currentStep = 0;
-  private workletReady = false;
-
   private tempo = 108;
   private hold = 0.35;
   private filterAmount = 0.78;
@@ -40,6 +42,7 @@ export class DrumMachine {
   constructor(options: DrumMachineOptions) {
     this.stepCount = options.stepCount;
     this.tracks = options.tracks;
+    this.engine = options.engine;
     this.onStepChange = options.onStepChange;
     this.pattern = options.tracks.map(() => Array.from({ length: options.stepCount }, () => false));
   }
@@ -122,10 +125,6 @@ export class DrumMachine {
 
   async dispose() {
     this.stop();
-
-    if (this.audioContext) {
-      await this.audioContext.close();
-    }
   }
 
   private async ensureAudio() {
@@ -133,7 +132,7 @@ export class DrumMachine {
       return;
     }
 
-    this.audioContext = new AudioContext({ latencyHint: "interactive" });
+    this.audioContext = await this.engine.getContext();
     this.masterGain = this.audioContext.createGain();
     this.masterGain.gain.value = 0.78;
 
@@ -147,16 +146,7 @@ export class DrumMachine {
     this.compressorNode.attack.value = 0.002;
     this.compressorNode.release.value = 0.16;
 
-    if (!this.workletReady) {
-      await this.audioContext.audioWorklet.addModule("/audio/bitcrusher-worklet.js");
-      this.workletReady = true;
-    }
-
-    this.crusherNode = new AudioWorkletNode(this.audioContext, "bitcrusher", {
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-      outputChannelCount: [2],
-    });
+    this.crusherNode = await this.engine.createBitcrusherNode();
 
     this.filterNode.connect(this.crusherNode);
     this.crusherNode.connect(this.masterGain);

@@ -36,17 +36,19 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  padding: 32px 20px 40px;
+  padding: 28px 18px 40px;
 }
 
 .page-header,
-.instrument-panel {
+.workspace-bar,
+.swipe-hint,
+.instrument-stage {
   max-width: 1240px;
   margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .eyebrow {
@@ -65,7 +67,7 @@ button {
 }
 
 .page-header h1 {
-  font-size: clamp(2.1rem, 3.1vw, 3.8rem);
+  font-size: clamp(2rem, 3.1vw, 3.8rem);
   line-height: 0.96;
 }
 
@@ -73,7 +75,10 @@ button {
 .panel-intro p,
 .control-cluster__header p:last-child,
 .control-note p,
-.tempo-card__label span {
+.tempo-card__label span,
+.keyboard-panel__header span,
+.pitch-readout span,
+.swipe-hint {
   color: #5d6e7c;
 }
 
@@ -83,70 +88,55 @@ button {
   font-size: 1.02rem;
 }
 
-.instrument-panel {
-  padding: 28px;
-  border-radius: 36px;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 38%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 242, 234, 0.94));
-  border: 1px solid rgba(213, 191, 168, 0.62);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 18px 48px rgba(166, 128, 87, 0.14);
-}
-
-.instrument-panel__header {
+.workspace-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 24px;
-  align-items: start;
-  margin-bottom: 24px;
+  grid-template-columns: minmax(0, 320px) minmax(280px, 360px);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.instrument-panel__header h2 {
-  font-size: clamp(1.8rem, 2.5vw, 3rem);
-  line-height: 0.98;
+.instrument-switcher {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(219, 206, 193, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
-.panel-intro p:last-child {
-  max-width: 40rem;
-  margin: 12px 0 0;
-}
-
-.transport-strip {
-  display: grid;
-  gap: 14px;
-  align-self: stretch;
-}
-
+.switch-pill,
 .transport-button,
-.soft-button {
+.soft-button,
+.chip-button {
   border: 0;
   border-radius: 999px;
   font-weight: 800;
 }
 
-.transport-button {
-  min-height: 58px;
-  padding: 14px 18px;
-  background: linear-gradient(180deg, #ffd7a3 0%, #ffb34b 100%);
-  color: #2b1f12;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.75),
-    0 14px 24px rgba(255, 179, 75, 0.28);
+.switch-pill {
+  min-height: 48px;
+  background: transparent;
+  color: #60707e;
 }
 
-.transport-button.is-live {
-  background: linear-gradient(180deg, #ffcfbf 0%, #ff866f 100%);
+.switch-pill.is-active {
+  background: linear-gradient(180deg, #fff1cc 0%, #ffd77f 100%);
+  color: #47301c;
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.7),
-    0 14px 24px rgba(255, 134, 111, 0.24);
+    inset 0 2px 0 rgba(255, 255, 255, 0.76),
+    0 10px 18px rgba(247, 193, 88, 0.16);
 }
 
 .tempo-card,
+.instrument-panel,
+.sequencer-area,
 .control-cluster,
 .control-note,
-.sequencer-area {
+.keyboard-panel,
+.pitch-strip {
   border-radius: 28px;
   background: rgba(255, 251, 245, 0.88);
   border: 1px solid rgba(222, 208, 193, 0.88);
@@ -166,9 +156,11 @@ button {
   gap: 12px;
 }
 
-.tempo-card__label strong {
+.tempo-card__label strong,
+.pitch-readout strong,
+.keyboard-panel__header strong {
   color: #26323d;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
 }
 
 .tempo-slider {
@@ -176,64 +168,157 @@ button {
   accent-color: #f4a53a;
 }
 
+.swipe-hint {
+  margin: 0 auto 16px;
+  font-size: 0.92rem;
+}
+
+.instrument-stage {
+  overflow: hidden;
+}
+
+.instrument-stage__track {
+  display: flex;
+  width: 200%;
+  transition: transform 260ms ease;
+}
+
+.instrument-panel {
+  width: 50%;
+  flex: 0 0 50%;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 242, 234, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 18px 48px rgba(166, 128, 87, 0.14);
+}
+
+.instrument-panel__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.instrument-panel__header h2 {
+  font-size: clamp(1.72rem, 2.4vw, 2.9rem);
+  line-height: 0.98;
+}
+
+.panel-intro p:last-child {
+  max-width: 38rem;
+  margin: 12px 0 0;
+}
+
+.pitch-strip {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+.chip-button {
+  min-height: 48px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #556473;
+  box-shadow:
+    inset 0 0 0 1px rgba(219, 206, 193, 0.92),
+    0 6px 14px rgba(170, 145, 115, 0.08);
+}
+
+.pitch-readout {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  text-align: center;
+}
+
 .instrument-panel__body {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 380px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(310px, 390px);
+  gap: 22px;
   align-items: start;
 }
 
 .sequencer-area {
-  padding: 22px 18px 18px;
+  padding: 20px 18px 18px;
+}
+
+.machine__dial,
+.synth-dial {
+  position: relative;
+  width: min(74vw, 620px);
+  height: min(74vw, 620px);
+  margin: 0 auto;
+  border-radius: 50%;
 }
 
 .machine__dial {
-  position: relative;
-  width: min(80vw, 620px);
-  height: min(80vw, 620px);
-  margin: 0 auto;
-  border-radius: 50%;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.76), rgba(244, 237, 228, 0.42) 62%, transparent 62%),
     radial-gradient(circle at center, rgba(255, 221, 183, 0.18), transparent 78%);
 }
 
-.dial-rings {
+.dial-rings,
+.synth-dial__ring {
   position: absolute;
   inset: 0;
 }
 
-.dial-ring {
+.dial-ring,
+.synth-dial__ring {
   position: absolute;
   top: 50%;
   left: 50%;
-  border: 2px dashed;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+}
+
+.dial-ring {
+  border: 2px dashed;
   opacity: 0.76;
 }
 
-.step-button {
+.synth-dial__ring {
+  width: 360px;
+  height: 360px;
+  border: 3px dashed rgba(121, 170, 255, 0.48);
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.82), rgba(226, 236, 255, 0.38) 62%, transparent 63%),
+    radial-gradient(circle at center, rgba(170, 204, 255, 0.18), transparent 82%);
+}
+
+.step-button,
+.note-step {
   position: absolute;
-  width: 42px;
-  height: 42px;
   border: 0;
-  border-radius: 50%;
-  padding: 0;
-  transform: translate(-50%, -50%) scale(1);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow:
-    inset 0 0 0 2px rgba(224, 213, 201, 0.9),
-    0 6px 16px rgba(150, 113, 71, 0.12);
+  transform: translate(-50%, -50%);
+  touch-action: manipulation;
   transition:
     transform 140ms ease,
     background-color 140ms ease,
     box-shadow 140ms ease;
-  touch-action: manipulation;
 }
 
-.step-button:hover {
-  transform: translate(-50%, -50%) scale(1.06);
+.step-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 0 0 2px rgba(224, 213, 201, 0.9),
+    0 6px 16px rgba(150, 113, 71, 0.12);
+}
+
+.step-button:hover,
+.note-step:hover,
+.dial-center-button:hover {
+  transform: translate(-50%, -50%) scale(1.03);
 }
 
 .step-button.is-active {
@@ -255,6 +340,52 @@ button {
   width: 100%;
   height: 100%;
   border-radius: inherit;
+}
+
+.note-step {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 84px;
+  min-height: 62px;
+  padding: 10px 8px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4e5f6d;
+  box-shadow:
+    inset 0 0 0 2px rgba(208, 220, 238, 0.9),
+    0 10px 18px rgba(113, 146, 189, 0.12);
+}
+
+.note-step small {
+  color: #7a8b9a;
+  font-size: 0.72rem;
+}
+
+.note-step strong {
+  font-size: 0.95rem;
+}
+
+.note-step.has-note {
+  background: linear-gradient(180deg, #f0f7ff 0%, #dceeff 100%);
+}
+
+.note-step.is-rest {
+  background: linear-gradient(180deg, #fffaf4 0%, #f4ede5 100%);
+}
+
+.note-step.is-selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 0 6px rgba(132, 187, 255, 0.18),
+    0 12px 20px rgba(113, 146, 189, 0.15);
+}
+
+.note-step.is-current {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow:
+    0 0 0 7px rgba(186, 226, 255, 0.4),
+    0 12px 20px rgba(113, 146, 189, 0.16);
 }
 
 .dial-center-button {
@@ -281,10 +412,6 @@ button {
     0 10px 24px rgba(153, 119, 83, 0.12);
 }
 
-.dial-center-button:hover {
-  transform: translate(-50%, -50%) scale(1.03);
-}
-
 .dial-center-button.is-live {
   background:
     radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.92), transparent 26%),
@@ -295,6 +422,22 @@ button {
     inset 0 -8px 18px rgba(44, 143, 61, 0.18),
     0 0 0 8px rgba(120, 225, 134, 0.18),
     0 14px 28px rgba(76, 184, 91, 0.22);
+}
+
+.dial-center-button--synth {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(233, 241, 255, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -8px 18px rgba(118, 145, 194, 0.12),
+    0 10px 24px rgba(109, 141, 194, 0.12);
+}
+
+.dial-center-button--synth.is-live {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.92), transparent 26%),
+    linear-gradient(180deg, #d7ffe2 0%, #69dd92 100%);
 }
 
 .track-legend {
@@ -323,6 +466,46 @@ button {
   border-radius: 50%;
 }
 
+.keyboard-panel {
+  margin-top: 18px;
+  padding: 16px;
+  background: rgba(247, 250, 255, 0.88);
+}
+
+.keyboard-panel__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.keyboard-strip {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.key-button {
+  min-height: 66px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+  color: #466173;
+  font-weight: 800;
+  box-shadow:
+    inset 0 0 0 1px rgba(203, 219, 238, 0.9),
+    0 8px 16px rgba(109, 141, 194, 0.08);
+}
+
+.key-button.is-active {
+  background: linear-gradient(180deg, #ddecff 0%, #b3d7ff 100%);
+  color: #204567;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.82),
+    0 10px 18px rgba(109, 141, 194, 0.14);
+}
+
 .control-bank {
   display: grid;
   gap: 16px;
@@ -333,14 +516,14 @@ button {
   padding: 18px;
 }
 
-.control-cluster__header p:last-child,
-.control-note p {
-  margin: 10px 0 0;
-}
-
 .control-cluster h3 {
   font-size: 1.25rem;
   color: #26323d;
+}
+
+.control-cluster__header p:last-child,
+.control-note p {
+  margin: 10px 0 0;
 }
 
 .action-row {
@@ -348,6 +531,10 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
+}
+
+.action-row--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .soft-button {
@@ -375,6 +562,10 @@ button {
   margin-top: 16px;
 }
 
+.knob-grid--wide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .knob-block {
   display: grid;
   justify-items: center;
@@ -383,8 +574,8 @@ button {
 
 .knob {
   position: relative;
-  width: 110px;
-  height: 110px;
+  width: 102px;
+  height: 102px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -410,7 +601,7 @@ button {
   left: 50%;
   bottom: 50%;
   width: 6px;
-  height: 36px;
+  height: 34px;
   transform-origin: 50% calc(100% - 6px);
   border-radius: 999px;
   background: linear-gradient(180deg, #ffffff 0%, hsl(var(--knob-hue) 90% 58%) 100%);
@@ -419,7 +610,7 @@ button {
 
 .knob__cap {
   position: absolute;
-  inset: 26px;
+  inset: 24px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.82), transparent 24%),
@@ -432,45 +623,91 @@ button {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1120px) {
+  .workspace-bar,
   .instrument-panel__header,
   .instrument-panel__body {
     grid-template-columns: 1fr;
   }
 
-  .transport-strip {
-    grid-template-columns: 220px minmax(0, 1fr);
-    align-items: center;
+  .pitch-strip {
+    max-width: 420px;
+  }
+
+  .instrument-stage__track {
+    width: 200%;
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 840px) {
   .app-shell {
-    padding: 20px 14px 28px;
+    padding: 20px 12px 28px;
   }
 
   .instrument-panel {
     padding: 18px;
-    border-radius: 28px;
+    border-radius: 24px;
   }
 
-  .transport-strip,
-  .track-legend,
-  .knob-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .machine__dial {
-    width: min(96vw, 560px);
-    height: min(96vw, 560px);
+  .machine__dial,
+  .synth-dial {
+    width: min(94vw, 560px);
+    height: min(94vw, 560px);
   }
 
   .step-button {
     width: 34px;
     height: 34px;
+  }
+
+  .note-step {
+    width: 72px;
+    min-height: 56px;
+    padding: 8px 6px;
+  }
+
+  .track-legend,
+  .keyboard-strip,
+  .knob-grid,
+  .knob-grid--wide,
+  .action-row,
+  .action-row--triple {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .workspace-bar,
+  .track-legend,
+  .keyboard-strip,
+  .knob-grid,
+  .knob-grid--wide,
+  .action-row,
+  .action-row--triple,
+  .pitch-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .machine__dial,
+  .synth-dial {
+    height: min(106vw, 520px);
+  }
+
+  .synth-dial__ring {
+    width: 300px;
+    height: 300px;
+  }
+
+  .step-button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .note-step {
+    width: 66px;
   }
 
   .dial-center-button {
@@ -479,26 +716,7 @@ button {
   }
 
   .knob {
-    width: 96px;
-    height: 96px;
-  }
-}
-
-@media (max-width: 520px) {
-  .instrument-panel__header h2 {
-    font-size: 1.65rem;
-  }
-
-  .machine__dial {
-    height: min(108vw, 520px);
-  }
-
-  .step-button {
-    width: 30px;
-    height: 30px;
-  }
-
-  .action-row {
-    grid-template-columns: 1fr;
+    width: 92px;
+    height: 92px;
   }
 }
