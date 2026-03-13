@@ -1,0 +1,20 @@
+{
+  "name": "kids-music-5.4",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "preact": "^10.26.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@preact/preset-vite": "^2.10.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.3.5"
+  }
+}
