@@ -32,28 +32,28 @@ const TRACKS: TrackDefinition[] = [
     label: "Kick",
     color: "#ffb347",
     accentColor: "#fff0ce",
-    radius: 212,
+    radius: 254,
   },
   {
     id: "snare",
     label: "Snare",
     color: "#ff7f66",
     accentColor: "#ffd9d0",
-    radius: 164,
+    radius: 206,
   },
   {
     id: "hat",
     label: "Hat",
     color: "#56c9a2",
     accentColor: "#daf8ee",
-    radius: 116,
+    radius: 158,
   },
   {
     id: "perc",
     label: "Clack",
     color: "#6db7ff",
     accentColor: "#dff0ff",
-    radius: 68,
+    radius: 110,
   },
 ];
 
@@ -157,6 +157,36 @@ function ActionOrb({ label, kind, onClick }: ActionOrbProps) {
         ) : (
           <svg viewBox="0 0 16 16" fill="currentColor">
             <path d="M8.086 1.207a1.5 1.5 0 0 1 2.121 0l4.586 4.586a1.5 1.5 0 0 1 0 2.121L9.914 12.793A1.5 1.5 0 0 1 8.854 13H3.5a.5.5 0 0 1-.354-.146l-2-2a.5.5 0 0 1 0-.708l6.94-6.939Zm1.414.707a.5.5 0 0 0-.707 0L2.207 8.5 3.707 10h4.94a.5.5 0 0 0 .353-.146l4.793-4.793a.5.5 0 0 0 0-.707L9.5 1.914ZM11.646 14.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L12 13.793l-1.646-1.647a.5.5 0 0 0-.708.708l2 2Z" />
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
+interface TransportIconButtonProps {
+  isPlaying: boolean;
+  onClick: () => void;
+  playLabel: string;
+  pauseLabel: string;
+}
+
+function TransportIconButton({ isPlaying, onClick, playLabel, pauseLabel }: TransportIconButtonProps) {
+  return (
+    <button
+      class={`dial-center-button ${isPlaying ? "is-live" : ""}`}
+      type="button"
+      onClick={onClick}
+      aria-label={isPlaying ? pauseLabel : playLabel}
+    >
+      <span class="transport-icon" aria-hidden="true">
+        {isPlaying ? (
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M5.5 3A1.5 1.5 0 0 1 7 4.5v7A1.5 1.5 0 0 1 5.5 13h-1A1.5 1.5 0 0 1 3 11.5v-7A1.5 1.5 0 0 1 4.5 3h1Zm6 0A1.5 1.5 0 0 1 13 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 9 11.5v-7A1.5 1.5 0 0 1 10.5 3h1Z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.596 8.697 6.233 11.89A1 1 0 0 1 4.75 11.03V4.97a1 1 0 0 1 1.483-.86l5.363 3.193a.75.75 0 0 1 0 1.394Z" />
           </svg>
         )}
       </span>
@@ -465,16 +495,6 @@ export function App() {
 
   return (
     <main class="app-shell">
-      <header class="page-header">
-        <p class="eyebrow">Orbit Duo Prototype</p>
-        <h1>Two instrument panels, one light browser synth toy.</h1>
-        <p class="subtitle">
-          This pass borrows the Dato Duo idea of a circular note sequencer, a keyboard lane underneath,
-          and a separate performance-control side, while keeping the browser audio path as lean as
-          possible.
-        </p>
-      </header>
-
       <section class="workspace-bar">
         <div class="instrument-switcher" aria-label="Instrument panels">
           <button
@@ -511,8 +531,6 @@ export function App() {
         </div>
       </section>
 
-      <p class="swipe-hint">Swipe sideways or tap the tabs to switch between drums and synth.</p>
-
       <section
         class="instrument-stage"
         onPointerDown={handleStagePointerDown}
@@ -526,17 +544,6 @@ export function App() {
           style={{ transform: `translateX(${activePanel === "drums" ? "0%" : "-50%"})` }}
         >
           <section class="instrument-panel">
-            <div class="instrument-panel__header">
-              <div class="panel-intro">
-                <p class="eyebrow">Drums</p>
-                <h2>Tap the circles to make a beat.</h2>
-                <p>
-                  The drum panel stays focused: touch the rings to build the loop, then shape the whole
-                  kit with a few bold controls.
-                </p>
-              </div>
-            </div>
-
             <div class="instrument-panel__body">
               <div class="sequencer-area">
                 <div class="machine__dial" aria-label="Circular drum sequencer">
@@ -556,34 +563,17 @@ export function App() {
 
                   {drumStepButtons}
 
-                  <button
-                    class={`dial-center-button ${isDrumPlaying ? "is-live" : ""}`}
-                    type="button"
+                  <TransportIconButton
+                    isPlaying={isDrumPlaying}
                     onClick={toggleDrumPlayback}
-                    aria-label={isDrumPlaying ? "Pause drums" : "Play drums"}
-                  >
-                    {isDrumPlaying ? "Pause" : "Play"}
-                  </button>
-                </div>
-
-                <div class="track-legend">
-                  {TRACKS.map((track) => (
-                    <div key={track.id} class="track-chip">
-                      <span class="track-chip__swatch" style={{ backgroundColor: track.color }} />
-                      <span>{track.label}</span>
-                    </div>
-                  ))}
+                    playLabel="Play drums"
+                    pauseLabel="Pause drums"
+                  />
                 </div>
               </div>
 
               <aside class="control-bank">
                 <div class="control-cluster">
-                  <div class="control-cluster__header">
-                    <p class="eyebrow">Pattern</p>
-                    <h3>Quick actions</h3>
-                    <p>Start with a groove, clear it, then tap your own pattern into the rings.</p>
-                  </div>
-
                   <div class="action-orb-row">
                     <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
                     <ActionOrb
@@ -595,12 +585,6 @@ export function App() {
                 </div>
 
                 <div class="control-cluster">
-                  <div class="control-cluster__header">
-                    <p class="eyebrow">Shape</p>
-                    <h3>Drum sound</h3>
-                    <p>Drag the dials up and down. Use volume to tuck drums under the synth when needed.</p>
-                  </div>
-
                   <div class="knob-grid">
                     <Knob id="drum-volume" label="Volume" value={drumVolumeAmount} onChange={setDrumVolumeAmount} hue={14} />
                     <Knob id="filter" label="Filter" value={drumFilterAmount} onChange={setDrumFilterAmount} hue={35} />
@@ -608,28 +592,12 @@ export function App() {
                     <Knob id="crusher" label="Crusher" value={drumCrushAmount} onChange={setDrumCrushAmount} hue={208} />
                   </div>
                 </div>
-
-                <div class="control-note">
-                  <p>
-                    Drums and synth now share the same browser audio context, which is the main efficiency
-                    win for keeping playback smooth on weaker hardware.
-                  </p>
-                </div>
               </aside>
             </div>
           </section>
 
           <section class="instrument-panel instrument-panel--synth">
-            <div class="instrument-panel__header">
-              <div class="panel-intro">
-                <p class="eyebrow">Synth</p>
-                <h2>Pick notes below, then press play in the middle.</h2>
-                <p>
-                  This is a lightweight monophonic synth with an eight-step circular sequencer and a
-                  minor-pentatonic keyboard so it stays musical quickly.
-                </p>
-              </div>
-
+            <div class="instrument-panel__header instrument-panel__header--minimal">
               <div class="pitch-strip">
                 <button
                   type="button"
@@ -658,35 +626,21 @@ export function App() {
                   <div class="synth-dial__ring" />
                   {synthStepButtons}
 
-                  <button
-                    class={`dial-center-button dial-center-button--synth ${isSynthPlaying ? "is-live" : ""}`}
-                    type="button"
+                  <TransportIconButton
+                    isPlaying={isSynthPlaying}
                     onClick={toggleSynthPlayback}
-                    aria-label={isSynthPlaying ? "Pause synth" : "Play synth"}
-                  >
-                    {isSynthPlaying ? "Pause" : "Play"}
-                  </button>
+                    playLabel="Play synth"
+                    pauseLabel="Pause synth"
+                  />
                 </div>
 
                 <div class="keyboard-panel">
-                  <div class="keyboard-panel__header">
-                    <span>Selected step</span>
-                    <strong>
-                      {selectedSynthStep + 1}: {getScaleNoteLabel(synthSequence[selectedSynthStep], synthTranspose)}
-                    </strong>
-                  </div>
                   <div class="keyboard-strip">{synthKeyboardButtons}</div>
                 </div>
               </div>
 
               <aside class="control-bank">
                 <div class="control-cluster">
-                  <div class="control-cluster__header">
-                    <p class="eyebrow">Pattern</p>
-                    <h3>Line builder</h3>
-                    <p>Select a step on the ring, then tap a key below to assign or preview that note.</p>
-                  </div>
-
                   <div class="action-orb-row">
                     <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
                     <ActionOrb
@@ -727,15 +681,6 @@ export function App() {
                 </div>
 
                 <div class="control-cluster">
-                  <div class="control-cluster__header">
-                    <p class="eyebrow">Performance</p>
-                    <h3>Voice controls</h3>
-                    <p>
-                      Pick a waveform first, then use detune to thicken it. Filter, release, glide, delay, crush, and
-                      accent shape the movement around them.
-                    </p>
-                  </div>
-
                   <div class="wave-selector" role="radiogroup" aria-label="Wave shape">
                     {SYNTH_WAVEFORMS.map((waveform) => (
                       <button
@@ -745,6 +690,7 @@ export function App() {
                         onClick={() => setSynthWaveform(waveform)}
                         role="radio"
                         aria-checked={synthWaveform === waveform}
+                        aria-label={waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
                       >
                         {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
                       </button>
