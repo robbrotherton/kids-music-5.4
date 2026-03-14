@@ -9,10 +9,19 @@ import { Knob } from "./components/Knob";
 const DRUM_STEP_COUNT = 16;
 const SYNTH_STEP_COUNT = 8;
 const SYNTH_SCALE_LENGTH = 10;
+const TEMPO_MIN = 80;
+const TEMPO_MAX = 140;
+const DEFAULT_TEMPO = 108;
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 const MINOR_PENTATONIC = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 const SYNTH_WAVEFORMS: SynthWaveform[] = ["sine", "triangle", "sawtooth", "square"];
 const SYNTH_RATES: SynthRate[] = ["half", "normal", "double", "quad"];
+const SYNTH_RATE_LABELS: Record<SynthRate, string> = {
+  half: "1/2x",
+  normal: "1x",
+  double: "2x",
+  quad: "4x",
+};
 const SYNTH_NOTE_COLORS = [
   { color: "#ff8d7a", accent: "#ffd8cf" },
   { color: "#ffb347", accent: "#ffe8bd" },
@@ -126,6 +135,18 @@ function getNoteTone(noteIndex: number) {
   }
 
   return SYNTH_NOTE_COLORS[noteIndex % SYNTH_NOTE_COLORS.length];
+}
+
+function normalizeTempo(tempo: number) {
+  return (tempo - TEMPO_MIN) / (TEMPO_MAX - TEMPO_MIN);
+}
+
+function denormalizeTempo(value: number) {
+  return Math.round(TEMPO_MIN + value * (TEMPO_MAX - TEMPO_MIN));
+}
+
+function normalizeSynthRate(rate: SynthRate) {
+  return SYNTH_RATES.indexOf(rate) / (SYNTH_RATES.length - 1);
 }
 
 interface ActionOrbProps {
@@ -436,6 +457,9 @@ export function App() {
     });
   }, [selectedSynthStep, synthSequence, synthTranspose]);
 
+  const tempoKnobValue = normalizeTempo(tempo);
+  const synthRateKnobValue = normalizeSynthRate(synthRate);
+
   const toggleDrumPlayback = async () => {
     const drumMachine = drumMachineRef.current;
 
@@ -470,69 +494,78 @@ export function App() {
     setIsSynthPlaying(true);
   };
 
+  const handleTempoChange = (value: number) => {
+    setTempo(denormalizeTempo(value));
+  };
+
+  const handleSynthRateChange = (value: number) => {
+    const nextIndex = Math.round(value * (SYNTH_RATES.length - 1));
+    setSynthRate(SYNTH_RATES[nextIndex] ?? "normal");
+  };
+
   return (
     <main class="app-shell">
-      <section class="workspace-bar">
-        <div class="tempo-card tempo-card--global">
-          <div class="tempo-card__label">
-            <span>Shared tempo</span>
-            <strong>{tempo} BPM</strong>
-          </div>
-          <input
-            class="tempo-slider"
-            type="range"
-            min="80"
-            max="140"
-            step="1"
-            value={tempo}
-            onInput={(event) => setTempo(Number((event.currentTarget as HTMLInputElement).value))}
-            aria-label="Tempo"
-          />
-        </div>
-      </section>
-
       <section class="instrument-stage">
         <section class="instrument-panel">
           <div class="instrument-panel__body instrument-panel__body--stacked">
             <div class="sequencer-area">
-              <div class="machine__dial" aria-label="Circular drum sequencer">
-                <div class="dial-rings">
-                  {TRACKS.map((track) => (
-                    <div
-                      key={track.id}
-                      class="dial-ring"
-                      style={{
-                        width: `${track.radius * 2 + 40}px`,
-                        height: `${track.radius * 2 + 40}px`,
-                        borderColor: `${track.color}66`,
-                      }}
+              <div class="sequencer-frame">
+                <div class="sequencer-toolbar">
+                  <div class="sequencer-toolbar__group sequencer-toolbar__group--actions">
+                    <div class="action-orb-row" role="group" aria-label="Drum pattern actions">
+                      <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
+                      <ActionOrb
+                        label="Clear"
+                        kind="clear"
+                        onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
+                      />
+                    </div>
+                  </div>
+
+                  <div class="sequencer-toolbar__group sequencer-toolbar__group--knob">
+                    <Knob
+                      id="tempo"
+                      label="Tempo"
+                      value={tempoKnobValue}
+                      onChange={handleTempoChange}
+                      hue={35}
+                      valueText={`${tempo} BPM`}
+                      ariaValueText={`${tempo} beats per minute`}
+                      resetValue={normalizeTempo(DEFAULT_TEMPO)}
+                      size="compact"
+                      step={1 / (TEMPO_MAX - TEMPO_MIN)}
                     />
-                  ))}
+                  </div>
                 </div>
 
-                {drumStepButtons}
+                <div class="machine__dial" aria-label="Circular drum sequencer">
+                  <div class="dial-rings">
+                    {TRACKS.map((track) => (
+                      <div
+                        key={track.id}
+                        class="dial-ring"
+                        style={{
+                          width: `${track.radius * 2 + 40}px`,
+                          height: `${track.radius * 2 + 40}px`,
+                          borderColor: `${track.color}66`,
+                        }}
+                      />
+                    ))}
+                  </div>
 
-                <TransportIconButton
-                  isPlaying={isDrumPlaying}
-                  onClick={toggleDrumPlayback}
-                  playLabel="Play drums"
-                  pauseLabel="Pause drums"
-                />
+                  {drumStepButtons}
+
+                  <TransportIconButton
+                    isPlaying={isDrumPlaying}
+                    onClick={toggleDrumPlayback}
+                    playLabel="Play drums"
+                    pauseLabel="Pause drums"
+                  />
+                </div>
               </div>
             </div>
 
             <aside class="control-bank">
-              <div class="control-cluster">
-                <div class="action-orb-row">
-                  <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
-                  <ActionOrb
-                    label="Clear"
-                    kind="clear"
-                    onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
-                  />
-                </div>
-              </div>
-
               <div class="control-cluster">
                 <div class="knob-grid knob-grid--drums">
                   <Knob id="drum-volume" label="Volume" value={drumVolumeAmount} onChange={setDrumVolumeAmount} hue={14} />
@@ -548,16 +581,46 @@ export function App() {
         <section class="instrument-panel instrument-panel--synth">
           <div class="instrument-panel__body instrument-panel__body--stacked">
             <div class="sequencer-area synth-sequencer-area">
-              <div class="synth-dial" aria-label="Circular synth sequencer">
-                <div class="synth-dial__ring" />
-                {synthStepButtons}
+              <div class="sequencer-frame">
+                <div class="sequencer-toolbar">
+                  <div class="sequencer-toolbar__group sequencer-toolbar__group--actions">
+                    <div class="action-orb-row" role="group" aria-label="Synth pattern actions">
+                      <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
+                      <ActionOrb
+                        label="Clear"
+                        kind="clear"
+                        onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
+                      />
+                    </div>
+                  </div>
 
-                <TransportIconButton
-                  isPlaying={isSynthPlaying}
-                  onClick={toggleSynthPlayback}
-                  playLabel="Play synth"
-                  pauseLabel="Pause synth"
-                />
+                  <div class="sequencer-toolbar__group sequencer-toolbar__group--knob">
+                    <Knob
+                      id="pattern-speed"
+                      label="Speed"
+                      value={synthRateKnobValue}
+                      onChange={handleSynthRateChange}
+                      hue={210}
+                      valueText={SYNTH_RATE_LABELS[synthRate]}
+                      ariaValueText={`Pattern speed ${SYNTH_RATE_LABELS[synthRate]}`}
+                      resetValue={normalizeSynthRate("normal")}
+                      size="compact"
+                      step={1 / (SYNTH_RATES.length - 1)}
+                    />
+                  </div>
+                </div>
+
+                <div class="synth-dial" aria-label="Circular synth sequencer">
+                  <div class="synth-dial__ring" />
+                  {synthStepButtons}
+
+                  <TransportIconButton
+                    isPlaying={isSynthPlaying}
+                    onClick={toggleSynthPlayback}
+                    playLabel="Play synth"
+                    pauseLabel="Pause synth"
+                  />
+                </div>
               </div>
 
               <div class="keyboard-panel">
@@ -590,32 +653,6 @@ export function App() {
             </div>
 
             <aside class="control-bank">
-              <div class="control-cluster">
-                <div class="action-orb-row">
-                  <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
-                  <ActionOrb
-                    label="Clear"
-                    kind="clear"
-                    onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
-                  />
-                </div>
-
-                <div class="rate-selector" role="radiogroup" aria-label="Synth rate">
-                  {SYNTH_RATES.map((rate) => (
-                    <button
-                      key={rate}
-                      type="button"
-                      class={`rate-button ${synthRate === rate ? "is-active" : ""}`}
-                      onClick={() => setSynthRate(rate)}
-                      role="radio"
-                      aria-checked={synthRate === rate}
-                    >
-                      {rate === "half" ? "1/2x" : rate === "double" ? "2x" : rate === "quad" ? "4x" : "1x"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div class="control-cluster">
                 <div class="wave-selector" role="radiogroup" aria-label="Wave shape">
                   {SYNTH_WAVEFORMS.map((waveform) => (
