@@ -1,6 +1,10 @@
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
   private workletReady = false;
+  private readonly bitcrusherWorkletUrl = new URL(
+    `${import.meta.env.BASE_URL}audio/bitcrusher-worklet.js`,
+    window.location.href,
+  ).href;
 
   async getContext() {
     if (!this.audioContext) {
@@ -24,7 +28,7 @@ export class AudioEngine {
     const context = await this.getContext();
 
     if (!this.workletReady) {
-      await context.audioWorklet.addModule("/audio/bitcrusher-worklet.js");
+      await context.audioWorklet.addModule(this.bitcrusherWorkletUrl);
       this.workletReady = true;
     }
 
