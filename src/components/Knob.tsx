@@ -10,7 +10,7 @@ interface KnobProps {
   valueText?: string;
   ariaValueText?: string;
   resetValue?: number;
-  size?: "default" | "compact";
+  size?: "default" | "compact" | "mini";
   step?: number;
 }
 
@@ -128,7 +128,9 @@ export function Knob({
   const percentage = Math.round(value * 100);
   const displayValue = valueText ?? `${percentage}%`;
   const spokenValue = ariaValueText ?? displayValue;
-  const blockClassName = `knob-block ${size === "compact" ? "knob-block--compact" : ""}`;
+  const sizeClassName =
+    size === "compact" ? "knob-block--compact" : size === "mini" ? "knob-block--mini" : "";
+  const blockClassName = sizeClassName ? `knob-block ${sizeClassName}` : "knob-block";
 
   return (
     <div class={blockClassName}>
@@ -154,9 +156,11 @@ export function Knob({
         <span class="knob__track" />
         <span class="knob__indicator" style={{ transform: `translateX(-50%) rotate(${angle}deg)` }} />
         <span class="knob__cap" />
+        <span class="knob__content" aria-hidden="true">
+          <span class="knob__label">{label}</span>
+          <span class="knob__value">{displayValue}</span>
+        </span>
       </button>
-      <span class="knob-block__label">{label}</span>
-      <span class="knob-block__value">{displayValue}</span>
     </div>
   );
 }
