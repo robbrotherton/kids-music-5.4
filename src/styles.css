@@ -4,6 +4,9 @@
   --panel-gap: 8px;
   --panel-pad-x: 10px;
   --panel-pad-y: 10px;
+  --panel-viewport-height: 100dvh;
+  --drum-stage-reserve: 180px;
+  --synth-stage-reserve: 252px;
   color-scheme: light;
   font-family: "Avenir Next", "Trebuchet MS", sans-serif;
   line-height: 1.4;
@@ -158,14 +161,22 @@ button {
 
 .dial-stage--drum {
   --dial-scale: var(--drum-scale);
-  width: calc(472px * var(--dial-scale));
-  height: calc(472px * var(--dial-scale));
+  width: min(
+    calc(472px * var(--dial-scale)),
+    calc(100% - 8px),
+    calc(var(--panel-viewport-height) - var(--drum-stage-reserve))
+  );
+  aspect-ratio: 1 / 1;
 }
 
 .dial-stage--synth {
   --dial-scale: var(--synth-scale);
-  width: calc(372px * var(--dial-scale));
-  height: calc(372px * var(--dial-scale));
+  width: min(
+    calc(372px * var(--dial-scale)),
+    calc(100% - 8px),
+    calc(var(--panel-viewport-height) - var(--synth-stage-reserve))
+  );
+  aspect-ratio: 1 / 1;
 }
 
 .machine__dial,
@@ -362,12 +373,19 @@ button {
 
 .keyboard-panel {
   width: 100%;
+  display: grid;
+  gap: 6px;
   margin-top: 0;
   padding: 0;
   background: transparent;
   border: 0;
   box-shadow: none;
   align-self: center;
+}
+
+.keyboard-scale-row {
+  display: flex;
+  justify-content: center;
 }
 
 .key-shift-row {
@@ -406,7 +424,7 @@ button {
 }
 
 .key-button {
-  min-height: 50px;
+  min-height: 36px;
   border: 0;
   border-radius: 12px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--note-accent) 78%, white 22%) 0%, color-mix(in srgb, var(--note-color) 38%, white 62%) 100%);
@@ -504,9 +522,8 @@ button {
   height: 18px;
 }
 
-.wave-selector {
+.selector-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 3px;
   padding: 3px;
   border-radius: 999px;
@@ -514,13 +531,22 @@ button {
   margin-bottom: 0;
 }
 
-.wave-selector--toolbar {
-  flex: 1 1 0;
-  min-width: 0;
+.selector-strip--scale {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 144px);
+}
+
+.selector-strip--wave {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 220px;
 }
 
-.wave-button {
+.selector-strip--toolbar {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.selector-button {
   min-height: 26px;
   border: 0;
   border-radius: 999px;
@@ -532,12 +558,19 @@ button {
   box-shadow: none;
 }
 
-.wave-button.is-active {
+.selector-button.is-active {
   background: linear-gradient(180deg, rgba(221, 236, 255, 0.96) 0%, rgba(179, 215, 255, 0.98) 100%);
   color: #204567;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 3px 8px rgba(109, 141, 194, 0.1);
+}
+
+.selector-button--emoji {
+  min-width: 42px;
+  padding: 0;
+  font-size: 0.96rem;
+  line-height: 1;
 }
 
 .control-row {
@@ -743,6 +776,8 @@ button {
     --panel-gap: 6px;
     --panel-pad-x: 8px;
     --panel-pad-y: 8px;
+    --drum-stage-reserve: 168px;
+    --synth-stage-reserve: 228px;
   }
 
   .app-shell {
@@ -759,11 +794,15 @@ button {
     height: 40px;
   }
 
-  .wave-selector--toolbar {
+  .selector-strip--scale {
+    width: min(100%, 138px);
+  }
+
+  .selector-strip--wave {
     max-width: 188px;
   }
 
-  .wave-button {
+  .selector-button {
     min-height: 24px;
     font-size: 0.5rem;
   }
@@ -787,7 +826,7 @@ button {
   }
 
   .key-button {
-    min-height: 28px;
+    min-height: 30px;
     font-size: 0.62rem;
   }
 }
@@ -796,6 +835,9 @@ button {
   :root {
     --drum-scale: 0.76;
     --synth-scale: 0.84;
+    --panel-viewport-height: 50dvh;
+    --drum-stage-reserve: 150px;
+    --synth-stage-reserve: 214px;
   }
 
   .instrument-stage {
@@ -815,6 +857,8 @@ button {
     --panel-gap: 6px;
     --panel-pad-x: 8px;
     --panel-pad-y: 8px;
+    --drum-stage-reserve: 142px;
+    --synth-stage-reserve: 202px;
   }
 
   .app-shell {
@@ -831,11 +875,15 @@ button {
     height: 40px;
   }
 
-  .wave-selector--toolbar {
+  .selector-strip--scale {
+    width: min(100%, 138px);
+  }
+
+  .selector-strip--wave {
     max-width: 188px;
   }
 
-  .wave-button {
+  .selector-button {
     min-height: 24px;
     font-size: 0.5rem;
   }
@@ -865,7 +913,11 @@ button {
 }
 
 @media (max-width: 720px) {
-  .wave-selector--toolbar {
+  .selector-strip--scale {
+    width: min(100%, 132px);
+  }
+
+  .selector-strip--wave {
     max-width: 176px;
   }
 

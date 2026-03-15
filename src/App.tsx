@@ -8,12 +8,10 @@ import { Knob } from "./components/Knob";
 
 const DRUM_STEP_COUNT = 16;
 const SYNTH_STEP_COUNT = 8;
-const SYNTH_SCALE_LENGTH = 10;
 const TEMPO_MIN = 80;
 const TEMPO_MAX = 140;
 const DEFAULT_TEMPO = 108;
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-const MINOR_PENTATONIC = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 const SYNTH_WAVEFORMS: SynthWaveform[] = ["sine", "triangle", "sawtooth", "square"];
 const SYNTH_RATES: SynthRate[] = ["half", "normal", "double", "quad"];
 const SYNTH_RATE_LABELS: Record<SynthRate, string> = {
@@ -22,6 +20,26 @@ const SYNTH_RATE_LABELS: Record<SynthRate, string> = {
   double: "2x",
   quad: "4x",
 };
+type SynthScalePreset = "happy" | "sad" | "major";
+const SYNTH_SCALE_PRESETS: Record<SynthScalePreset, { label: string; emoji: string; offsets: number[] }> = {
+  happy: {
+    label: "Happy",
+    emoji: "😊",
+    offsets: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21],
+  },
+  sad: {
+    label: "Sad",
+    emoji: "🌙",
+    offsets: [0, 3, 5, 7, 10, 12, 15, 17, 19, 22],
+  },
+  major: {
+    label: "Major",
+    emoji: "🎼",
+    offsets: [0, 2, 4, 5, 7, 9, 11, 12, 14, 16],
+  },
+};
+const DEFAULT_SYNTH_SCALE: SynthScalePreset = "sad";
+const SYNTH_SCALE_LENGTH = SYNTH_SCALE_PRESETS[DEFAULT_SYNTH_SCALE].offsets.length;
 const SYNTH_SEQUENCE_RADIUS = 108;
 const SYNTH_NOTE_COLORS = [
   { color: "#ff8d7a", accent: "#ffd8cf" },
@@ -110,24 +128,29 @@ function createInitialSynthSequence() {
   return [0, 2, 4, -1, 7, 4, 2, -1];
 }
 
-function randomizeSynthSequence() {
+function randomizeSynthSequence(scaleLength: number) {
+  const safeScaleLength = Math.max(1, scaleLength);
+  const anchorChoices = [0, Math.min(2, safeScaleLength - 1), Math.min(4, safeScaleLength - 1), Math.min(7, safeScaleLength - 1)];
+
   return Array.from({ length: SYNTH_STEP_COUNT }, (_, stepIndex) => {
     if (stepIndex === 0 || stepIndex === 4) {
-      return [0, 2, 4, 7][Math.floor(Math.random() * 4)];
+      return anchorChoices[Math.floor(Math.random() * anchorChoices.length)];
     }
 
-    return Math.random() > 0.25 ? Math.floor(Math.random() * SYNTH_SCALE_LENGTH) : -1;
+    return Math.random() > 0.25 ? Math.floor(Math.random() * safeScaleLength) : -1;
   });
 }
 
-function getScaleNoteLabel(noteIndex: number, transpose: number) {
+function getScaleNoteLabel(noteIndex: number, transpose: number, scaleOffsets: readonly number[]) {
   if (noteIndex < 0) {
     return "Rest";
   }
 
-  const semitone = MINOR_PENTATONIC[noteIndex] + transpose;
+  const safeIndex = Math.max(0, Math.min(noteIndex, scaleOffsets.length - 1));
+  const scaleOffset = scaleOffsets[safeIndex] ?? 0;
+  const semitone = scaleOffset + transpose;
   const noteName = NOTE_NAMES[((semitone % 12) + 12) % 12];
-  return noteIndex >= 5 ? `${noteName}↑` : noteName;
+  return scaleOffset >= 12 ? `${noteName}↑` : noteName;
 }
 
 function getNoteTone(noteIndex: number) {
@@ -229,6 +252,7 @@ export function App() {
   const [currentSynthStep, setCurrentSynthStep] = useState(0);
   const [isSynthPlaying, setIsSynthPlaying] = useState(false);
   const [synthTranspose, setSynthTranspose] = useState(0);
+  const [synthScalePreset, setSynthScalePreset] = useState<SynthScalePreset>(DEFAULT_SYNTH_SCALE);
   const [synthWaveform, setSynthWaveform] = useState<SynthWaveform>("triangle");
   const [synthRate, setSynthRate] = useState<SynthRate>("normal");
   const [synthFilter, setSynthFilter] = useState(0.58);
@@ -238,6 +262,7 @@ export function App() {
   const [synthDelay, setSynthDelay] = useState(0);
   const [synthCrush, setSynthCrush] = useState(0);
   const [synthDetune, setSynthDetune] = useState(0.08);
+  const activeSynthScale = SYNTH_SCALE_PRESETS[synthScalePreset];
 
   useEffect(() => {
     const audioEngine = new AudioEngine();
@@ -270,6 +295,7 @@ export function App() {
     synthMachine.setSequence(synthSequence);
     synthMachine.setTempo(tempo);
     synthMachine.setTranspose(synthTranspose);
+    synthMachine.setScaleOffsets(activeSynthScale.offsets);
     synthMachine.setWaveform(synthWaveform);
     synthMachine.setRate(synthRate);
     synthMachine.setFilter(synthFilter);
@@ -322,6 +348,10 @@ export function App() {
   useEffect(() => {
     synthMachineRef.current?.setTranspose(synthTranspose);
   }, [synthTranspose]);
+
+  useEffect(() => {
+    synthMachineRef.current?.setScaleOffsets(activeSynthScale.offsets);
+  }, [activeSynthScale]);
 
   useEffect(() => {
     synthMachineRef.current?.setWaveform(synthWaveform);
@@ -403,7 +433,7 @@ export function App() {
       const y = Math.sin(angle) * SYNTH_SEQUENCE_RADIUS;
       const isCurrent = stepIndex === currentSynthStep && isSynthPlaying;
       const isSelected = stepIndex === selectedSynthStep;
-      const label = getScaleNoteLabel(noteIndex, synthTranspose);
+      const label = getScaleNoteLabel(noteIndex, synthTranspose, activeSynthScale.offsets);
       const tone = getNoteTone(noteIndex);
 
       return (
@@ -426,13 +456,13 @@ export function App() {
         </button>
       );
     });
-  }, [currentSynthStep, isSynthPlaying, selectedSynthStep, synthSequence, synthTranspose]);
+  }, [activeSynthScale, currentSynthStep, isSynthPlaying, selectedSynthStep, synthSequence, synthTranspose]);
 
   const synthKeyboardButtons = useMemo(() => {
-    const noteOptions = [-1, ...Array.from({ length: SYNTH_SCALE_LENGTH }, (_, noteIndex) => noteIndex)];
+    const noteOptions = [-1, ...Array.from({ length: activeSynthScale.offsets.length }, (_, noteIndex) => noteIndex)];
 
     return noteOptions.map((noteIndex) => {
-      const label = getScaleNoteLabel(noteIndex, synthTranspose);
+      const label = getScaleNoteLabel(noteIndex, synthTranspose, activeSynthScale.offsets);
       const isActive = synthSequence[selectedSynthStep] === noteIndex;
       const tone = getNoteTone(noteIndex);
 
@@ -456,7 +486,7 @@ export function App() {
         </button>
       );
     });
-  }, [selectedSynthStep, synthSequence, synthTranspose]);
+  }, [activeSynthScale, selectedSynthStep, synthSequence, synthTranspose]);
 
   const tempoKnobValue = normalizeTempo(tempo);
   const synthRateKnobValue = normalizeSynthRate(synthRate);
@@ -607,7 +637,11 @@ export function App() {
               <div class="sequencer-frame sequencer-frame--synth">
                 <div class="sequencer-toolbar sequencer-toolbar--synth">
                   <div class="action-orb-row" role="group" aria-label="Synth pattern actions">
-                    <ActionOrb label="Spark" kind="spark" onClick={() => setSynthSequence(randomizeSynthSequence())} />
+                    <ActionOrb
+                      label="Spark"
+                      kind="spark"
+                      onClick={() => setSynthSequence(randomizeSynthSequence(activeSynthScale.offsets.length))}
+                    />
                     <ActionOrb
                       label="Clear"
                       kind="clear"
@@ -615,12 +649,12 @@ export function App() {
                     />
                   </div>
 
-                  <div class="wave-selector wave-selector--toolbar" role="radiogroup" aria-label="Wave shape">
+                  <div class="selector-strip selector-strip--wave selector-strip--toolbar" role="radiogroup" aria-label="Wave shape">
                     {SYNTH_WAVEFORMS.map((waveform) => (
                       <button
                         key={waveform}
                         type="button"
-                        class={`wave-button ${synthWaveform === waveform ? "is-active" : ""}`}
+                        class={`selector-button ${synthWaveform === waveform ? "is-active" : ""}`}
                         onClick={() => setSynthWaveform(waveform)}
                         role="radio"
                         aria-checked={synthWaveform === waveform}
@@ -685,6 +719,25 @@ export function App() {
                       <path d="M5.5 2.5 11.5 8l-6 5.5v-11Z" />
                     </svg>
                   </button>
+                </div>
+
+                <div class="keyboard-scale-row">
+                  <div class="selector-strip selector-strip--scale" role="radiogroup" aria-label="Scale mood">
+                    {(Object.keys(SYNTH_SCALE_PRESETS) as SynthScalePreset[]).map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        class={`selector-button selector-button--emoji ${synthScalePreset === preset ? "is-active" : ""}`}
+                        onClick={() => setSynthScalePreset(preset)}
+                        role="radio"
+                        aria-checked={synthScalePreset === preset}
+                        aria-label={SYNTH_SCALE_PRESETS[preset].label}
+                        title={SYNTH_SCALE_PRESETS[preset].label}
+                      >
+                        <span aria-hidden="true">{SYNTH_SCALE_PRESETS[preset].emoji}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

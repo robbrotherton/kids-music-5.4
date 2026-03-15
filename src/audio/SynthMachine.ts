@@ -18,7 +18,7 @@ interface ActiveVoice {
   oscB: OscillatorNode;
 }
 
-const SCALE_OFFSETS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
+const DEFAULT_SCALE_OFFSETS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const midiToFrequency = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
@@ -49,6 +49,7 @@ export class SynthMachine {
   private unsubscribe: (() => void) | null = null;
   private sequence: number[];
   private activeVoices = new Set<ActiveVoice>();
+  private scaleOffsets = [...DEFAULT_SCALE_OFFSETS];
 
   private tempo = 108;
   private transpose = 0;
@@ -75,6 +76,10 @@ export class SynthMachine {
 
   setSequence(sequence: number[]) {
     this.sequence = sequence.map((value) => value);
+  }
+
+  setScaleOffsets(scaleOffsets: readonly number[]) {
+    this.scaleOffsets = scaleOffsets.map((offset) => offset);
   }
 
   setTempo(tempo: number) {
@@ -281,7 +286,7 @@ export class SynthMachine {
       return;
     }
 
-    const offset = SCALE_OFFSETS[clamp(noteIndex, 0, SCALE_OFFSETS.length - 1)];
+    const offset = this.scaleOffsets[clamp(noteIndex, 0, this.scaleOffsets.length - 1)];
     const midi = 60 + this.transpose + offset;
     const frequency = midiToFrequency(midi);
     const releaseTime = (isPreview ? 0.18 : 0.09) + this.release * 0.34;
