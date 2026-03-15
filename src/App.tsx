@@ -539,32 +539,32 @@ export function App() {
       <section class="instrument-stage">
         <section class="instrument-panel instrument-panel--drum">
           <div class="instrument-layout">
+            <div class="sequencer-toolbar">
+              <div class="action-orb-row" role="group" aria-label="Drum pattern actions">
+                <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
+                <ActionOrb
+                  label="Clear"
+                  kind="clear"
+                  onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
+                />
+              </div>
+
+              <Knob
+                id="tempo"
+                label="Tempo"
+                value={tempoKnobValue}
+                onChange={handleTempoChange}
+                hue={35}
+                valueText={`${tempo}`}
+                ariaValueText={`${tempo} beats per minute`}
+                resetValue={normalizeTempo(DEFAULT_TEMPO)}
+                size="compact"
+                step={1 / (TEMPO_MAX - TEMPO_MIN)}
+              />
+            </div>
+
             <div class="sequencer-area">
               <div class="sequencer-frame sequencer-frame--drum">
-                <div class="sequencer-toolbar">
-                  <div class="action-orb-row" role="group" aria-label="Drum pattern actions">
-                    <ActionOrb label="Spark" kind="spark" onClick={() => setDrumPattern(randomizeDrumPattern())} />
-                    <ActionOrb
-                      label="Clear"
-                      kind="clear"
-                      onClick={() => setDrumPattern(TRACKS.map(() => Array.from({ length: DRUM_STEP_COUNT }, () => false)))}
-                    />
-                  </div>
-
-                  <Knob
-                    id="tempo"
-                    label="Tempo"
-                    value={tempoKnobValue}
-                    onChange={handleTempoChange}
-                    hue={35}
-                    valueText={`${tempo}`}
-                    ariaValueText={`${tempo} beats per minute`}
-                    resetValue={normalizeTempo(DEFAULT_TEMPO)}
-                    size="compact"
-                    step={1 / (TEMPO_MAX - TEMPO_MIN)}
-                  />
-                </div>
-
                 <div class="dial-stage dial-stage--drum">
                   <div class="machine__dial" aria-label="Circular drum sequencer">
                     <div class="dial-rings">
@@ -633,52 +633,52 @@ export function App() {
 
         <section class="instrument-panel instrument-panel--synth">
           <div class="instrument-layout">
+            <div class="sequencer-toolbar sequencer-toolbar--synth">
+              <div class="action-orb-row" role="group" aria-label="Synth pattern actions">
+                <ActionOrb
+                  label="Spark"
+                  kind="spark"
+                  onClick={() => setSynthSequence(randomizeSynthSequence(activeSynthScale.offsets.length))}
+                />
+                <ActionOrb
+                  label="Clear"
+                  kind="clear"
+                  onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
+                />
+              </div>
+
+              <div class="selector-strip selector-strip--wave selector-strip--toolbar" role="radiogroup" aria-label="Wave shape">
+                {SYNTH_WAVEFORMS.map((waveform) => (
+                  <button
+                    key={waveform}
+                    type="button"
+                    class={`selector-button ${synthWaveform === waveform ? "is-active" : ""}`}
+                    onClick={() => setSynthWaveform(waveform)}
+                    role="radio"
+                    aria-checked={synthWaveform === waveform}
+                    aria-label={waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
+                  >
+                    {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              <Knob
+                id="pattern-speed"
+                label="Speed"
+                value={synthRateKnobValue}
+                onChange={handleSynthRateChange}
+                hue={210}
+                valueText={SYNTH_RATE_LABELS[synthRate]}
+                ariaValueText={`Pattern speed ${SYNTH_RATE_LABELS[synthRate]}`}
+                resetValue={normalizeSynthRate("normal")}
+                size="compact"
+                step={1 / (SYNTH_RATES.length - 1)}
+              />
+            </div>
+
             <div class="sequencer-area synth-sequencer-area">
               <div class="sequencer-frame sequencer-frame--synth">
-                <div class="sequencer-toolbar sequencer-toolbar--synth">
-                  <div class="action-orb-row" role="group" aria-label="Synth pattern actions">
-                    <ActionOrb
-                      label="Spark"
-                      kind="spark"
-                      onClick={() => setSynthSequence(randomizeSynthSequence(activeSynthScale.offsets.length))}
-                    />
-                    <ActionOrb
-                      label="Clear"
-                      kind="clear"
-                      onClick={() => setSynthSequence(Array.from({ length: SYNTH_STEP_COUNT }, () => -1))}
-                    />
-                  </div>
-
-                  <div class="selector-strip selector-strip--wave selector-strip--toolbar" role="radiogroup" aria-label="Wave shape">
-                    {SYNTH_WAVEFORMS.map((waveform) => (
-                      <button
-                        key={waveform}
-                        type="button"
-                        class={`selector-button ${synthWaveform === waveform ? "is-active" : ""}`}
-                        onClick={() => setSynthWaveform(waveform)}
-                        role="radio"
-                        aria-checked={synthWaveform === waveform}
-                        aria-label={waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
-                      >
-                        {waveform === "sawtooth" ? "Saw" : waveform[0].toUpperCase() + waveform.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <Knob
-                    id="pattern-speed"
-                    label="Speed"
-                    value={synthRateKnobValue}
-                    onChange={handleSynthRateChange}
-                    hue={210}
-                    valueText={SYNTH_RATE_LABELS[synthRate]}
-                    ariaValueText={`Pattern speed ${SYNTH_RATE_LABELS[synthRate]}`}
-                    resetValue={normalizeSynthRate("normal")}
-                    size="compact"
-                    step={1 / (SYNTH_RATES.length - 1)}
-                  />
-                </div>
-
                 <div class="dial-stage dial-stage--synth">
                   <div class="synth-dial" aria-label="Circular synth sequencer">
                     <div class="synth-dial__ring" />

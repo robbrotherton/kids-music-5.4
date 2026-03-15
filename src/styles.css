@@ -90,7 +90,7 @@ button {
 
 .instrument-layout {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 4px;
   width: 100%;
   height: 100%;
@@ -110,10 +110,7 @@ button {
 
 .sequencer-frame {
   display: grid;
-  justify-items: center;
-  align-content: stretch;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 6px;
+  place-items: center;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -124,12 +121,12 @@ button {
 }
 
 .synth-sequencer-area {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.92fr);
 }
 
 .sequencer-frame--synth {
-  height: auto;
-  align-self: start;
+  height: 100%;
+  align-self: stretch;
 }
 
 .sequencer-toolbar {
@@ -157,6 +154,7 @@ button {
   align-self: center;
   width: 100%;
   margin: 0 auto;
+  z-index: 1;
 }
 
 .dial-stage--drum {
@@ -374,6 +372,8 @@ button {
 .keyboard-panel {
   width: 100%;
   display: grid;
+  height: 100%;
+  align-content: center;
   gap: 6px;
   margin-top: 0;
   padding: 0;
@@ -381,6 +381,8 @@ button {
   border: 0;
   box-shadow: none;
   align-self: center;
+  position: relative;
+  z-index: 2;
 }
 
 .keyboard-scale-row {
@@ -582,6 +584,8 @@ button {
   width: 100%;
   min-width: 0;
   margin: 0 auto;
+  position: relative;
+  z-index: 2;
 }
 
 .control-row--drum {
@@ -769,15 +773,33 @@ button {
   font-size: 0.48rem;
 }
 
-@media (max-height: 720px) {
+@media (orientation: landscape) and (max-height: 900px) {
   :root {
     --drum-scale: 0.9;
-    --synth-scale: 0.98;
+    --synth-scale: 0.94;
+    --drum-stage-reserve: 220px;
+    --synth-stage-reserve: 286px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 820px) {
+  :root {
+    --drum-scale: 0.82;
+    --synth-scale: 0.86;
+    --drum-stage-reserve: 236px;
+    --synth-stage-reserve: 306px;
+  }
+}
+
+@media (max-height: 720px) {
+  :root {
+    --drum-scale: 0.74;
+    --synth-scale: 0.78;
     --panel-gap: 6px;
     --panel-pad-x: 8px;
     --panel-pad-y: 8px;
-    --drum-stage-reserve: 168px;
-    --synth-stage-reserve: 228px;
+    --drum-stage-reserve: 242px;
+    --synth-stage-reserve: 314px;
   }
 
   .app-shell {
