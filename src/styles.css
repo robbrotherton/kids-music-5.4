@@ -1,12 +1,14 @@
 :root {
-  --drum-scale: 1.02;
-  --synth-scale: 1.12;
+  --app-height: 100svh;
+  --stage-max-height: 960px;
+  --drum-stage-max: 482px;
+  --synth-stage-max: 417px;
   --panel-gap: 8px;
   --panel-pad-x: 10px;
   --panel-pad-y: 10px;
-  --panel-viewport-height: 100dvh;
-  --drum-stage-reserve: 180px;
-  --synth-stage-reserve: 252px;
+  --panel-viewport-height: var(--app-height);
+  --drum-stage-reserve: 158px;
+  --synth-stage-reserve: 220px;
   color-scheme: light;
   font-family: "Avenir Next", "Trebuchet MS", sans-serif;
   line-height: 1.4;
@@ -32,7 +34,7 @@ body,
 }
 
 body {
-  min-height: 100dvh;
+  min-height: var(--app-height);
   overflow: hidden;
 }
 
@@ -46,10 +48,13 @@ button {
 }
 
 .app-shell {
-  height: 100dvh;
-  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  height: var(--app-height);
+  min-height: var(--app-height);
   padding: 8px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .transport-button,
@@ -66,6 +71,7 @@ button {
   align-items: stretch;
   width: min(100%, 1360px);
   height: 100%;
+  max-height: 100%;
   margin: 0 auto;
 }
 
@@ -91,7 +97,7 @@ button {
 .instrument-layout {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 4px;
+  gap: clamp(3px, 1vh, 8px);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -121,7 +127,7 @@ button {
 }
 
 .synth-sequencer-area {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.92fr);
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .sequencer-frame--synth {
@@ -136,6 +142,7 @@ button {
   gap: 6px;
   width: 100%;
   min-width: 0;
+  min-height: fit-content;
   padding: 0 2px;
 }
 
@@ -152,27 +159,33 @@ button {
   display: grid;
   place-items: center;
   align-self: center;
+  justify-self: center;
   width: 100%;
+  max-width: 100%;
+  max-height: 100%;
   margin: 0 auto;
+  overflow: visible;
   z-index: 1;
 }
 
 .dial-stage--drum {
-  --dial-scale: var(--drum-scale);
+  --step-size: clamp(22px, 7.2%, 34px);
+  --center-size: clamp(64px, 19.5%, 92px);
   width: min(
-    calc(472px * var(--dial-scale)),
     calc(100% - 8px),
-    calc(var(--panel-viewport-height) - var(--drum-stage-reserve))
+    calc(var(--panel-viewport-height) - var(--drum-stage-reserve)),
+    var(--drum-stage-max)
   );
   aspect-ratio: 1 / 1;
 }
 
 .dial-stage--synth {
-  --dial-scale: var(--synth-scale);
+  --step-size: clamp(30px, 12.4%, 46px);
+  --center-size: clamp(70px, 24.75%, 92px);
   width: min(
-    calc(372px * var(--dial-scale)),
     calc(100% - 8px),
-    calc(var(--panel-viewport-height) - var(--synth-stage-reserve))
+    calc(var(--panel-viewport-height) - var(--synth-stage-reserve)),
+    var(--synth-stage-max)
   );
   aspect-ratio: 1 / 1;
 }
@@ -186,25 +199,23 @@ button {
 
 .dial-stage > .machine__dial,
 .dial-stage > .synth-dial {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  position: relative;
   margin: 0;
-  transform: translate(-50%, -50%) scale(var(--dial-scale));
-  transform-origin: center;
+  width: 100%;
+  height: 100%;
 }
 
 .machine__dial {
-  width: 472px;
-  height: 472px;
+  width: 100%;
+  height: 100%;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.48), rgba(244, 237, 228, 0.16) 62%, transparent 62%),
     radial-gradient(circle at center, rgba(255, 221, 183, 0.12), transparent 78%);
 }
 
 .synth-dial {
-  width: 372px;
-  height: 372px;
+  width: 100%;
+  height: 100%;
 }
 
 .dial-rings,
@@ -228,8 +239,8 @@ button {
 }
 
 .synth-dial__ring {
-  width: 236px;
-  height: 236px;
+  width: 63.4408602151%;
+  height: 63.4408602151%;
   border: 2px dashed rgba(121, 170, 255, 0.4);
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.44), rgba(226, 236, 255, 0.18) 62%, transparent 63%),
@@ -249,8 +260,8 @@ button {
 }
 
 .step-button {
-  width: 34px;
-  height: 34px;
+  width: var(--step-size);
+  height: var(--step-size);
   border-radius: 50%;
   padding: 0;
   background: rgba(255, 255, 255, 0.74);
@@ -289,8 +300,8 @@ button {
 .note-step {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: var(--step-size);
+  height: var(--step-size);
   padding: 0;
   border-radius: 50%;
   background: linear-gradient(180deg, color-mix(in srgb, var(--note-color) 70%, white 30%) 0%, var(--note-color) 100%);
@@ -308,7 +319,7 @@ button {
 }
 
 .note-step__label {
-  font-size: 0.72rem;
+  font-size: clamp(0.52rem, calc(var(--step-size) * 0.26), 0.72rem);
   font-weight: 900;
   letter-spacing: 0.01em;
 }
@@ -333,8 +344,8 @@ button {
   left: 50%;
   display: grid;
   place-items: center;
-  width: 92px;
-  height: 92px;
+  width: var(--center-size);
+  height: var(--center-size);
   transform: translate(-50%, -50%);
   border: 0;
   border-radius: 50%;
@@ -360,19 +371,19 @@ button {
 .transport-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: clamp(24px, calc(var(--center-size) * 0.37), 34px);
+  height: clamp(24px, calc(var(--center-size) * 0.37), 34px);
 }
 
 .transport-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 70%;
+  height: 70%;
 }
 
 .keyboard-panel {
   width: 100%;
   display: grid;
-  height: 100%;
+  height: auto;
   align-content: center;
   gap: 6px;
   margin-top: 0;
@@ -579,7 +590,7 @@ button {
   display: flex;
   flex-wrap: nowrap;
   justify-content: space-between;
-  gap: 4px;
+  gap: clamp(4px, 0.9vw, 8px);
   align-items: center;
   width: 100%;
   min-width: 0;
@@ -773,36 +784,37 @@ button {
   font-size: 0.48rem;
 }
 
+@media (orientation: landscape) {
+  .instrument-stage {
+    height: min(100%, var(--stage-max-height));
+  }
+}
+
 @media (orientation: landscape) and (max-height: 900px) {
   :root {
-    --drum-scale: 0.9;
-    --synth-scale: 0.94;
-    --drum-stage-reserve: 220px;
-    --synth-stage-reserve: 286px;
+    --drum-stage-reserve: 154px;
+    --synth-stage-reserve: 214px;
   }
 }
 
 @media (orientation: landscape) and (max-height: 820px) {
   :root {
-    --drum-scale: 0.82;
-    --synth-scale: 0.86;
-    --drum-stage-reserve: 236px;
-    --synth-stage-reserve: 306px;
+    --drum-stage-reserve: 150px;
+    --synth-stage-reserve: 208px;
   }
 }
 
 @media (max-height: 720px) {
   :root {
-    --drum-scale: 0.74;
-    --synth-scale: 0.78;
     --panel-gap: 6px;
     --panel-pad-x: 8px;
     --panel-pad-y: 8px;
-    --drum-stage-reserve: 242px;
-    --synth-stage-reserve: 314px;
+    --drum-stage-reserve: 146px;
+    --synth-stage-reserve: 202px;
   }
 
   .app-shell {
+    place-items: start center;
     padding: 6px;
   }
 
@@ -853,34 +865,138 @@ button {
   }
 }
 
+@media (orientation: landscape) and (max-height: 540px) {
+  :root {
+    --drum-stage-reserve: 150px;
+    --synth-stage-reserve: 230px;
+  }
+
+  .instrument-layout {
+    gap: 3px;
+  }
+
+  .sequencer-toolbar {
+    gap: 4px;
+  }
+
+  .sequencer-area,
+  .keyboard-panel {
+    gap: 4px;
+  }
+
+  .selector-strip--wave {
+    max-width: 164px;
+  }
+
+  .control-row--drum {
+    width: min(100%, 284px);
+  }
+
+  .control-row--synth {
+    width: min(100%, 388px);
+  }
+
+  .key-shift-row {
+    width: min(100%, 392px);
+  }
+
+  .knob-block--compact .knob {
+    width: 56px;
+    height: 56px;
+  }
+
+  .knob-block--compact .knob__track {
+    inset: 4px;
+  }
+
+  .knob-block--compact .knob__track::after {
+    inset: 6px;
+  }
+
+  .knob-block--compact .knob__indicator {
+    width: 4px;
+    height: 18px;
+  }
+
+  .knob-block--compact .knob__cap,
+  .knob-block--compact .knob__content {
+    inset: 14px;
+  }
+
+  .knob-block--mini .knob {
+    width: 48px;
+    height: 48px;
+  }
+
+  .knob-block--mini .knob__cap {
+    inset: 12px;
+  }
+
+  .knob-block--mini .knob__content {
+    inset: 11px;
+  }
+}
+
 @media (orientation: portrait) {
   :root {
-    --drum-scale: 0.76;
-    --synth-scale: 0.84;
-    --panel-viewport-height: 50dvh;
-    --drum-stage-reserve: 150px;
-    --synth-stage-reserve: 214px;
+    --panel-viewport-height: var(--app-height);
+    --drum-stage-max: 420px;
+    --synth-stage-max: 332px;
+    --drum-stage-reserve: 0px;
+    --synth-stage-reserve: 0px;
+  }
+
+  .app-shell {
+    place-items: start center;
   }
 
   .instrument-stage {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    align-content: start;
   }
 
   .instrument-panel {
+    height: auto;
     border-radius: 24px;
+  }
+
+  .instrument-layout,
+  .sequencer-area,
+  .sequencer-frame,
+  .sequencer-frame--synth {
+    height: auto;
+  }
+
+  .dial-stage--drum {
+    width: min(calc(100% - 12px), var(--drum-stage-max));
+  }
+
+  .dial-stage--synth {
+    width: min(calc(100% - 24px), var(--synth-stage-max));
+  }
+
+  .control-row--drum {
+    width: min(100%, 300px);
+  }
+
+  .control-row--synth {
+    width: min(100%, 392px);
   }
 }
 
 @media (orientation: portrait) and (max-height: 940px) {
   :root {
-    --drum-scale: 0.7;
-    --synth-scale: 0.76;
+    --drum-stage-max: 388px;
+    --synth-stage-max: 308px;
     --panel-gap: 6px;
     --panel-pad-x: 8px;
     --panel-pad-y: 8px;
-    --drum-stage-reserve: 142px;
-    --synth-stage-reserve: 202px;
+    --drum-stage-reserve: 0px;
+    --synth-stage-reserve: 0px;
   }
 
   .app-shell {
@@ -915,7 +1031,7 @@ button {
   }
 
   .control-row--synth {
-    width: min(100%, 432px);
+    width: min(100%, 388px);
   }
 
   .key-shift-row {

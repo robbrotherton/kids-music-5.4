@@ -40,6 +40,8 @@ const SYNTH_SCALE_PRESETS: Record<SynthScalePreset, { label: string; emoji: stri
 };
 const DEFAULT_SYNTH_SCALE: SynthScalePreset = "sad";
 const SYNTH_SCALE_LENGTH = SYNTH_SCALE_PRESETS[DEFAULT_SYNTH_SCALE].offsets.length;
+const DRUM_DIAL_SIZE = 472;
+const SYNTH_DIAL_SIZE = 372;
 const SYNTH_SEQUENCE_RADIUS = 108;
 const SYNTH_NOTE_COLORS = [
   { color: "#ff8d7a", accent: "#ffd8cf" },
@@ -171,6 +173,14 @@ function denormalizeTempo(value: number) {
 
 function normalizeSynthRate(rate: SynthRate) {
   return SYNTH_RATES.indexOf(rate) / (SYNTH_RATES.length - 1);
+}
+
+function dialOffsetToPercent(offset: number, dialSize: number) {
+  return `${((offset + dialSize / 2) / dialSize) * 100}%`;
+}
+
+function dialLengthToPercent(length: number, dialSize: number) {
+  return `${(length / dialSize) * 100}%`;
 }
 
 interface ActionOrbProps {
@@ -403,8 +413,8 @@ export function App() {
             type="button"
             class={`step-button ${isActive ? "is-active" : ""} ${isCurrent ? "is-current" : ""}`}
             style={{
-              left: `calc(50% + ${x}px)`,
-              top: `calc(50% + ${y}px)`,
+              left: dialOffsetToPercent(x, DRUM_DIAL_SIZE),
+              top: dialOffsetToPercent(y, DRUM_DIAL_SIZE),
               "--step-color": track.color,
               "--step-accent": track.accentColor,
             } as StepButtonStyle}
@@ -444,8 +454,8 @@ export function App() {
             noteIndex >= 0 ? "has-note" : "is-rest"
           }`}
           style={{
-            left: `calc(50% + ${x}px)`,
-            top: `calc(50% + ${y}px)`,
+            left: dialOffsetToPercent(x, SYNTH_DIAL_SIZE),
+            top: dialOffsetToPercent(y, SYNTH_DIAL_SIZE),
             "--note-color": tone.color,
             "--note-accent": tone.accent,
           } as NoteToneStyle}
@@ -573,8 +583,8 @@ export function App() {
                           key={track.id}
                           class="dial-ring"
                           style={{
-                            width: `${track.radius * 2 + 40}px`,
-                            height: `${track.radius * 2 + 40}px`,
+                            width: dialLengthToPercent(track.radius * 2 + 40, DRUM_DIAL_SIZE),
+                            height: dialLengthToPercent(track.radius * 2 + 40, DRUM_DIAL_SIZE),
                             borderColor: `${track.color}66`,
                           }}
                         />
