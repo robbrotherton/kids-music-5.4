@@ -20,7 +20,9 @@ const SYNTH_RATE_LABELS: Record<SynthRate, string> = {
   double: "2x",
   quad: "4x",
 };
+type TriStateLevel = 0 | 1 | 2;
 type SynthScalePreset = "happy" | "sad" | "major";
+type ModeControl = "hold" | "release" | "glide" | "accent" | "delay" | "crush" | "detune";
 const SYNTH_SCALE_PRESETS: Record<SynthScalePreset, { label: string; emoji: string; offsets: number[] }> = {
   happy: {
     label: "Happy",
@@ -43,6 +45,15 @@ const SYNTH_SCALE_LENGTH = SYNTH_SCALE_PRESETS[DEFAULT_SYNTH_SCALE].offsets.leng
 const DRUM_DIAL_SIZE = 472;
 const SYNTH_DIAL_SIZE = 372;
 const SYNTH_SEQUENCE_RADIUS = 108;
+const MODE_VALUES: Record<ModeControl, readonly [number, number, number]> = {
+  hold: [0, 0.35, 0.7],
+  release: [0, 0.5, 1.0],
+  glide: [0, 0.08, 0.38],
+  accent: [0, 0.24, 0.48],
+  delay: [0, 0.22, 0.58],
+  crush: [0, 0.18, 0.8],
+  detune: [0, 0.4, 1.0],
+};
 const SYNTH_NOTE_COLORS = [
   { color: "#ff8d7a", accent: "#ffd8cf" },
   { color: "#ffb347", accent: "#ffe8bd" },
@@ -95,6 +106,10 @@ type StepButtonStyle = JSX.CSSProperties & {
 type NoteToneStyle = JSX.CSSProperties & {
   "--note-color": string;
   "--note-accent": string;
+};
+
+type ModeButtonStyle = JSX.CSSProperties & {
+  "--mode-accent": string;
 };
 
 function createInitialDrumPattern() {
@@ -175,6 +190,16 @@ function normalizeSynthRate(rate: SynthRate) {
   return SYNTH_RATES.indexOf(rate) / (SYNTH_RATES.length - 1);
 }
 
+function getTriStateLevel(value: number, values: readonly [number, number, number]): TriStateLevel {
+  const matches = values.findIndex((candidate) => Math.abs(candidate - value) < 0.001);
+  return (matches >= 0 ? matches : 0) as TriStateLevel;
+}
+
+function getNextTriStateValue(value: number, values: readonly [number, number, number]) {
+  const nextLevel = (getTriStateLevel(value, values) + 1) % values.length;
+  return values[nextLevel] ?? values[0];
+}
+
 function dialOffsetToPercent(offset: number, dialSize: number) {
   return `${((offset + dialSize / 2) / dialSize) * 100}%`;
 }
@@ -242,6 +267,94 @@ function TransportIconButton({ isPlaying, onClick, playLabel, pauseLabel }: Tran
   );
 }
 
+interface TriStateModeButtonProps {
+  control: ModeControl;
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function TriStateModeButton({ control, value, onChange }: TriStateModeButtonProps) {
+  const values = MODE_VALUES[control];
+  const level = getTriStateLevel(value, values);
+  const label =
+    control === "hold"
+      ? "Hold"
+      : control === "release"
+      ? "Release"
+      : control === "glide"
+        ? "Glide"
+        : control === "accent"
+          ? "Accent"
+        : control === "delay"
+          ? "Delay"
+          : control === "crush"
+            ? "Crush"
+            : "Detune";
+  const accent =
+    control === "hold"
+      ? "#3fdd9b"
+      : control === "release"
+      ? "#39d84a"
+      : control === "glide"
+        ? "#8b4dff"
+        : control === "accent"
+          ? "#ff9f2f"
+        : control === "delay"
+          ? "#3f8fff"
+          : control === "crush"
+            ? "#ff4f9f"
+            : "#a8e533";
+
+  return (
+    <button
+      type="button"
+      class={`mode-button mode-button--${control} mode-button--level-${level}`}
+      style={{ "--mode-accent": accent } as ModeButtonStyle}
+      onClick={() => onChange(getNextTriStateValue(value, values))}
+      aria-label={`${label} ${level === 0 ? "off" : level === 1 ? "low" : "high"}`}
+      title={`${label}: ${level === 0 ? "Off" : level === 1 ? "Low" : "High"}`}
+    >
+      <span class="mode-button__icon" aria-hidden="true">
+        {control === "hold" || control === "release" ? (
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 2h8L9.3 6.2a2 2 0 0 0 0 2.2L12 12H4l2.7-3.6a2 2 0 0 0 0-2.2Z" />
+          </svg>
+        ) : control === "glide" ? (
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M2 10c2.2 0 2.8-4 5-4s2.8 4 5 4 2.8-4 2.8-4" />
+          </svg>
+        ) : control === "accent" ? (
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1.2 9.4 5l3.8 1.4-3.8 1.4L8 11.6 6.6 7.8 2.8 6.4 6.6 5 8 1.2Zm4.3 8.1.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8.8-2.1Z" />
+          </svg>
+        ) : control === "delay" ? (
+          <svg viewBox="0 0 16 16" fill="currentColor" style={{ transform: "scaleX(-1)" }}>
+            <path d="M13.5 3.2h-1.9v9.6h1.9V3.2Zm-4.1 1.8H7.5v6h1.9V5Zm-4.1 2H3.4v2h1.9V7Z" />
+          </svg>
+        ) : control === "crush" ? (
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4.2" width="10" height="7.8" rx="2.2" />
+            <path d="M6 2.5v1.7M10 2.5v1.7M3 8H1.8M14.2 8H13" />
+            <circle cx="6.2" cy="7.7" r=".7" fill="currentColor" stroke="none" />
+            <circle cx="9.8" cy="7.7" r=".7" fill="currentColor" stroke="none" />
+            <path d="M6.1 10h3.8" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 3v10M11 3v10" />
+            <path d="M3 6.2 5 4.6l2 1.6M9 11.4 11 9.8l2 1.6" />
+          </svg>
+        )}
+      </span>
+      <span class="mode-button__dots" aria-hidden="true">
+        {([0, 1, 2] as const).map((dotLevel) => (
+          <span key={dotLevel} class={`mode-button__dot ${dotLevel <= level ? "is-active" : ""}`} />
+        ))}
+      </span>
+    </button>
+  );
+}
+
 export function App() {
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumMachineRef = useRef<DrumMachine | null>(null);
@@ -254,8 +367,8 @@ export function App() {
   const [isDrumPlaying, setIsDrumPlaying] = useState(false);
   const [drumVolumeAmount, setDrumVolumeAmount] = useState(0.6);
   const [drumFilterAmount, setDrumFilterAmount] = useState(0.78);
-  const [drumHoldAmount, setDrumHoldAmount] = useState(0.35);
-  const [drumCrushAmount, setDrumCrushAmount] = useState(0.12);
+  const [drumHoldAmount, setDrumHoldAmount] = useState(MODE_VALUES.hold[1]);
+  const [drumCrushAmount, setDrumCrushAmount] = useState(MODE_VALUES.crush[1]);
 
   const [synthSequence, setSynthSequence] = useState<number[]>(() => createInitialSynthSequence());
   const [selectedSynthStep, setSelectedSynthStep] = useState(0);
@@ -266,12 +379,12 @@ export function App() {
   const [synthWaveform, setSynthWaveform] = useState<SynthWaveform>("triangle");
   const [synthRate, setSynthRate] = useState<SynthRate>("normal");
   const [synthFilter, setSynthFilter] = useState(0.58);
-  const [synthRelease, setSynthRelease] = useState(0.26);
-  const [synthGlide, setSynthGlide] = useState(0.08);
-  const [synthAccent, setSynthAccent] = useState(0.24);
-  const [synthDelay, setSynthDelay] = useState(0);
-  const [synthCrush, setSynthCrush] = useState(0);
-  const [synthDetune, setSynthDetune] = useState(0.08);
+  const [synthRelease, setSynthRelease] = useState(MODE_VALUES.release[1]);
+  const [synthGlide, setSynthGlide] = useState(MODE_VALUES.glide[1]);
+  const [synthAccent, setSynthAccent] = useState(MODE_VALUES.accent[1]);
+  const [synthDelay, setSynthDelay] = useState(MODE_VALUES.delay[0]);
+  const [synthCrush, setSynthCrush] = useState(MODE_VALUES.crush[0]);
+  const [synthDetune, setSynthDetune] = useState(MODE_VALUES.detune[1]);
   const activeSynthScale = SYNTH_SCALE_PRESETS[synthScalePreset];
 
   useEffect(() => {
@@ -621,22 +734,8 @@ export function App() {
                 hue={35}
                 size="mini"
               />
-              <Knob
-                id="hold"
-                label="Hold"
-                value={drumHoldAmount}
-                onChange={setDrumHoldAmount}
-                hue={155}
-                size="mini"
-              />
-              <Knob
-                id="crusher"
-                label="Crusher"
-                value={drumCrushAmount}
-                onChange={setDrumCrushAmount}
-                hue={208}
-                size="mini"
-              />
+              <TriStateModeButton control="hold" value={drumHoldAmount} onChange={setDrumHoldAmount} />
+              <TriStateModeButton control="crush" value={drumCrushAmount} onChange={setDrumCrushAmount} />
             </div>
           </div>
         </section>
@@ -754,19 +853,12 @@ export function App() {
 
             <div class="control-row control-row--synth" role="group" aria-label="Synth controls">
               <Knob id="freq" label="Freq" value={synthFilter} onChange={setSynthFilter} hue={185} size="mini" />
-              <Knob
-                id="release"
-                label="Release"
-                value={synthRelease}
-                onChange={setSynthRelease}
-                hue={128}
-                size="mini"
-              />
-              <Knob id="glide" label="Glide" value={synthGlide} onChange={setSynthGlide} hue={265} size="mini" />
-              <Knob id="accent" label="Accent" value={synthAccent} onChange={setSynthAccent} hue={18} size="mini" />
-              <Knob id="delay" label="Delay" value={synthDelay} onChange={setSynthDelay} hue={210} size="mini" />
-              <Knob id="crush-2" label="Crush" value={synthCrush} onChange={setSynthCrush} hue={334} size="mini" />
-              <Knob id="detune" label="Detune" value={synthDetune} onChange={setSynthDetune} hue={78} size="mini" />
+              <TriStateModeButton control="release" value={synthRelease} onChange={setSynthRelease} />
+              <TriStateModeButton control="glide" value={synthGlide} onChange={setSynthGlide} />
+              <TriStateModeButton control="accent" value={synthAccent} onChange={setSynthAccent} />
+              <TriStateModeButton control="delay" value={synthDelay} onChange={setSynthDelay} />
+              <TriStateModeButton control="crush" value={synthCrush} onChange={setSynthCrush} />
+              <TriStateModeButton control="detune" value={synthDetune} onChange={setSynthDetune} />
             </div>
           </div>
         </section>

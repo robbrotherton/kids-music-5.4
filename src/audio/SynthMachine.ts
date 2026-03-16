@@ -293,8 +293,8 @@ export class SynthMachine {
     const peak = 0.12 + this.accent * 0.16;
     const baseFilter = this.getBaseFilterFrequency();
     const accentLift = 1.12 + this.accent * 1.3;
-    const detuneCurve = Math.pow(this.detune, 1.2);
-    const detuneAmount = detuneCurve * 46;
+    const detuneCurve = Math.pow(this.detune, 0.9);
+    const detuneAmount = detuneCurve * 32;
     const glideTime = canGlide ? 0.002 + this.glide * 0.06 : 0;
     const attackTime = time + 0.01;
 
@@ -310,7 +310,8 @@ export class SynthMachine {
     filterNode.type = "lowpass";
 
     mixA.gain.value = 0.8;
-    mixB.gain.value = 0.2 + detuneCurve * 0.24;
+    mixB.gain.value = 0.18 + detuneCurve * 0.3;
+    oscA.detune.value = -detuneAmount * 0.45;
     oscB.detune.value = detuneAmount;
 
     oscA.connect(mixA);
